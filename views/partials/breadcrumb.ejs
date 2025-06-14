@@ -1,0 +1,25 @@
+<% if (breadcrumbs && breadcrumbs.length > 0) { %>
+<nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb bg-light p-3 rounded">
+        <% breadcrumbs.forEach((item, index) => { %>
+            <% if (index === breadcrumbs.length - 1) { %>
+                <li class="breadcrumb-item active" aria-current="page">
+                    <% if (item.icon) { %>
+                        <i class="<%= item.icon %> me-1"></i>
+                    <% } %>
+                    <%= item.label %>
+                </li>
+            <% } else { %>
+                <li class="breadcrumb-item">
+                    <a href="<%= item.url || '#' %>" class="text-decoration-none">
+                        <% if (item.icon) { %>
+                            <i class="<%= item.icon %> me-1"></i>
+                        <% } %>
+                        <%= item.label %>
+                    </a>
+                </li>
+            <% } %>
+        <% }); %>
+    </ol>
+</nav>
+<% } %>

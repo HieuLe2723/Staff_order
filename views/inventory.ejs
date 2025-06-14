@@ -1,0 +1,134 @@
+<%- include('header') %>
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <h2 class="mb-4 text-center">📦 Quản Lý Kho</h2>
+    </div>
+  </div>
+  <h2><%= editMaterialMode ? 'Sửa Nguyên Liệu' : editEquipmentMode ? 'Sửa Thiết Bị' : 'Thêm Nguyên Liệu' %></h2>
+  <% if (error) { %>
+    <p class="text-danger"><%= error %></p>
+  <% } %>
+  <% if (editMaterialMode) { %>
+    <form action="/admin/inventory/material" method="POST">
+      <input type="hidden" name="nguyenlieu_id" value="<%= material.nguyenlieu_id %>">
+      <label>Tên Nguyên Liệu</label>
+      <input type="text" name="ten_nguyenlieu" value="<%= material.ten_nguyenlieu %>" required>
+      <label>Đơn Vị</label>
+      <input type="text" name="don_vi" value="<%= material.don_vi %>" required>
+      <label>Số Lượng Còn Lại</label>
+      <input type="number" name="so_luong_con_lai" value="<%= material.so_luong_con_lai %>" required>
+      <label>Ngưỡng Cảnh Báo</label>
+      <input type="number" name="nguong_canh_bao" value="<%= material.nguong_canh_bao %>" required>
+      <button type="submit">Cập Nhật</button>
+    </form>
+  <% } else if (editEquipmentMode) { %>
+    <form action="/admin/inventory/equipment" method="POST">
+      <input type="hidden" name="thietbi_id" value="<%= equipment.thietbi_id %>">
+      <label>Tên Thiết Bị</label>
+      <input type="text" name="ten" value="<%= equipment.ten %>" required>
+      <label>Số Lượng</label>
+      <input type="number" name="so_luong" value="<%= equipment.so_luong %>" required>
+      <label>Trạng Thái</label>
+      <select name="trang_thai" required>
+        <option value="HoatDong" <%= equipment.trang_thai === 'HoatDong' ? 'selected' : '' %>>Hoạt Động</option>
+        <option value="DangSuaChua" <%= equipment.trang_thai === 'DangSuaChua' ? 'selected' : '' %>>Đang Sửa Chữa</option>
+        <option value="HuHong" <%= equipment.trang_thai === 'HuHong' ? 'selected' : '' %>>Hỏng</option>
+      </select>
+      <button type="submit">Cập Nhật</button>
+    </form>
+  <% } else { %>
+    <h2>Thêm Nguyên Liệu</h2>
+    <form action="/admin/inventory/addMaterial" method="POST">
+      <label>Tên Nguyên Liệu</label>
+      <input type="text" name="ten_nguyenlieu" required>
+      <label>Đơn Vị</label>
+      <input type="text" name="don_vi" required>
+      <label>Số Lượng Còn Lại</label>
+      <input type="number" name="so_luong_con_lai" required>
+      <label>Ngưỡng Cảnh Báo</label>
+      <input type="number" name="nguong_canh_bao" required>
+      <button type="submit">Thêm</button>
+    </form>
+    <h2>Thêm Thiết Bị</h2>
+    <form action="/admin/inventory/addEquipment" method="POST">
+      <label>Tên Thiết Bị</label>
+      <input type="text" name="ten" required>
+      <label>Số Lượng</label>
+      <input type="number" name="so_luong" required>
+      <label>Trạng Thái</label>
+      <select name="trang_thai" required>
+        <option value="HoatDong">Hoạt Động</option>
+        <option value="DangSuaChua">Đang Sửa Chữa</option>
+        <option value="HuHong">Hỏng</option>
+      </select>
+      <button type="submit">Thêm</button>
+    </form>
+  <% } %>
+
+  <h2>Danh Sách Kho</h2>
+  <h3>Nguyên Liệu</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Tên</th>
+        <th>Đơn Vị</th>
+        <th>Số Lượng</th>
+        <th>Ngưỡng Cảnh Báo</th>
+        <th>Hành Động</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (materials && materials.length > 0) { %>
+        <% materials.forEach(material => { %>
+          <tr>
+            <td><%= material.ten_nguyenlieu %></td>
+            <td><%= material.don_vi %></td>
+            <td><%= material.so_luong_con_lai %></td>
+            <td><%= material.nguong_canh_bao %></td>
+            <td>
+              <a href="/admin/inventory/editMaterial/<%= material.nguyenlieu_id %>">Cập Nhật</a>
+            </td>
+          </tr>
+        <% }) %>
+      <% } else { %>
+        <tr>
+          <td colspan="5">Không có nguyên liệu nào.</td>
+        </tr>
+      <% } %>
+    </tbody>
+  </table>
+
+  <h3>Thiết Bị</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Tên</th>
+        <th>Số Lượng</th>
+        <th>Trạng Thái</th>
+        <th>Hành Động</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (equipments && equipments.length > 0) { %>
+        <% equipments.forEach(equipment => { %>
+          <tr>
+            <td><%= equipment.ten %></td>
+            <td><%= equipment.so_luong %></td>
+            <td><%= equipment.trang_thai %></td>
+            <td>
+              <a href="/admin/inventory/editEquipment/<%= equipment.thietbi_id %>">Cập Nhật</a>
+            </td>
+          </tr>
+        <% }) %>
+      <% } else { %>
+        <tr>
+          <td colspan="4">Không có thiết bị nào.</td>
+        </tr>
+      <% } %>
+    </tbody>
+  </table>
+
+  <button onclick="toggleDarkMode()">Chuyển Đổi Chế Độ Tối</button>
+</div>
+<%- include('footer') %>

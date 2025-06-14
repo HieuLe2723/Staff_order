@@ -1,0 +1,433 @@
+<% 
+  layout('layout', { 
+    title: 'Quản Lý Món Ăn',
+    breadcrumbs: [
+      { label: 'Trang chủ', url: '/' },
+      { label: 'Quản lý món ăn', active: true }
+    ],
+    stylesheets: [
+      'https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css'
+    ],
+    scripts: [
+      'https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js',
+      'https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js'
+    ]
+  }) 
+%>
+
+<style>
+  .dish-card {
+    transition: all 0.3s ease;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .dish-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--primary);
+  }
+  
+  .dish-card .card-img-top {
+    height: 180px;
+    object-fit: cover;
+  }
+  
+  .dish-card .card-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .dish-card .card-title {
+    font-weight: var(--font-weight-semibold);
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
+  }
+  
+  .dish-card .card-text {
+    color: var(--text-muted);
+    flex-grow: 1;
+    margin-bottom: 1rem;
+  }
+  
+  .dish-price {
+    font-size: 1.25rem;
+    font-weight: var(--font-weight-bold);
+    color: var(--primary);
+  }
+  
+  .dish-badge {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    z-index: 1;
+  }
+  
+  .dish-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: auto;
+  }
+  
+  .dish-actions .btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+  
+  .dish-actions .btn i {
+    font-size: 0.875rem;
+  }
+  
+  .search-box {
+    max-width: 300px;
+  }
+  
+  .category-filter {
+    min-width: 200px;
+  }
+  
+  @media (max-width: 768px) {
+    .search-box,
+    .category-filter {
+      width: 100%;
+      max-width: 100%;
+    }
+  }
+</style>
+
+<div class="container-fluid">
+  <!-- Page Header -->
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
+    <div class="mb-3 mb-md-0">
+      <h1 class="h3 mb-2">
+        <i class="fas fa-utensils text-primary me-2"></i>Quản Lý Món Ăn
+      </h1>
+      <p class="text-muted mb-0">Quản lý danh sách món ăn và thực đơn nhà hàng</p>
+    </div>
+    <div>
+      <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addDishModal">
+        <i class="fas fa-plus me-2"></i>Thêm Món Mới
+      </button>
+    </div>
+  </div>
+  
+  <!-- Filters -->
+  <div class="card mb-4">
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <div class="input-group">
+            <span class="input-group-text bg-transparent"><i class="fas fa-search"></i></span>
+            <input type="text" class="form-control search-box" id="searchDish" placeholder="Tìm kiếm món ăn...">
+          </div>
+        </div>
+        <div class="col-md-4">
+          <select class="form-select category-filter" id="categoryFilter">
+            <option value="">Tất cả danh mục</option>
+            <option value="appetizer">Khai vị</option>
+            <option value="main">Món chính</option>
+            <option value="dessert">Tráng miệng</option>
+            <option value="drink">Đồ uống</option>
+          </select>
+        </div>
+        <div class="col-md-2 text-md-end">
+          <button class="btn btn-outline-secondary w-100" id="resetFilters">
+            <i class="fas fa-sync-alt me-1"></i> Đặt lại
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add/Edit Dish Modal -->
+<div class="modal fade" id="addDishModal" tabindex="-1" aria-labelledby="addDishModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-light">
+        <h5 class="modal-title" id="addDishModalLabel">
+          <i class="fas fa-utensils me-2"></i>
+          <%= editMode ? 'Chỉnh Sửa Món Ăn' : 'Thêm Món Ăn Mới' %>
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+        <div class="modal-body">
+          <form action="<%= editMode ? '/admin/dishes/edit' : '/admin/dishes/add' %>" method="POST" enctype="multipart/form-data">
+            <% if (editMode) { %>
+              <input type="hidden" name="monan_id" value="<%= dish.monan_id %>">
+            <% } %>
+            <div class="mb-3">
+              <label class="form-label">Tên Món</label>
+              <input type="text" class="form-control" name="ten_mon" value="<%= editMode ? dish.ten_mon : '' %>" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Loại Món</label>
+              <select class="form-select" name="loai_id" required>
+                <option value="">Chọn loại món</option>
+                <% loai_mon_an.forEach(loai => { %>
+                  <option value="<%= loai.loai_id %>" <%= editMode && dish.loai_id === loai.loai_id ? 'selected' : '' %>><%= loai.ten_loai %></option>
+                <% }) %>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Giá (VND)</label>
+              <input type="number" class="form-control" name="gia" value="<%= editMode ? dish.gia : '' %>" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Hình Ảnh</label>
+              <input type="file" class="form-control" name="hinh_anh">
+              <% if (editMode && dish.hinh_anh) { %>
+                <p class="mt-2">Hình ảnh hiện tại: <img src="/uploads/<%= dish.hinh_anh %>" class="dish-image"></p>
+              <% } %>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+              <button type="submit" class="btn btn-primary"><%= editMode ? 'Cập Nhật' : 'Thêm' %></button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title mb-4">Danh Sách Món Ăn</h5>
+          <div class="table-responsive">
+            <table class="table table-hover">
+              <thead class="table-light">
+                <tr>
+                  <th>STT</th>
+                  <th>Hình Ảnh</th>
+                  <th>Tên Món</th>
+                  <th>Loại Món</th>
+                  <th>Giá</th>
+                  <th>Trạng Thái</th>
+                  <th>Thao Tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% dishes.forEach((dish, index) => { %>
+                  <tr>
+                    <td><%= index + 1 %></td>
+                    <td>
+                      <img src="/uploads/<%= dish.hinh_anh %>" class="dish-image" alt="<%= dish.ten_mon %>">
+                    </td>
+                    <td><%= dish.ten_mon %></td>
+                    <td><%= dish.ten_loai %></td>
+                    <td><%= dish.gia.toLocaleString('vi-VN') %> VND</td>
+                    <td>
+                      <span class="badge bg-<%= dish.trang_thai ? 'success' : 'danger' %>">
+                        <%= dish.trang_thai ? 'Còn Hàng' : 'Hết Hàng' %>
+                      </span>
+                    </td>
+                    <td>
+                      <div class="dish-actions">
+                        <button class="btn btn-sm btn-primary edit-dish" 
+                                data-id="<%= dish.monan_id %>">
+                          <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger delete-dish" 
+                                data-id="<%= dish.monan_id %>">
+                          <i class="fas fa-trash"></i>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Initialize DataTable
+  document.addEventListener('DOMContentLoaded', function() {
+    const table = $('#dishesTable').DataTable({
+      responsive: true,
+      language: {
+        url: '//cdn.datatables.net/plug-ins/1.11.5/i18n/vi.json'
+      },
+      order: [[1, 'asc']],
+      columnDefs: [
+        { orderable: false, targets: [0, 5] },
+        { searchable: false, targets: [0, 4, 5] }
+      ]
+    });
+    
+    // Search functionality
+    $('#searchDish').on('keyup', function() {
+      table.search(this.value).draw();
+    });
+    
+    // Category filter
+    $('#categoryFilter').on('change', function() {
+      const category = this.value;
+      table.column(2).search(category).draw();
+    });
+    
+    // Reset filters
+    $('#resetFilters').on('click', function() {
+      $('#searchDish').val('');
+      $('#categoryFilter').val('');
+      table.search('').columns().search('').draw();
+    });
+  });
+  
+  // Handle edit button clicks using event delegation
+  document.addEventListener('click', function(event) {
+    // Edit button click
+    if (event.target.closest('.edit-dish')) {
+      const button = event.target.closest('.edit-dish');
+      const id = button.getAttribute('data-id');
+      window.location.href = `/admin/dishes/edit/${id}`;
+    }
+    
+    // Delete button click
+    if (event.target.closest('.delete-dish')) {
+      const button = event.target.closest('.delete-dish');
+      const id = button.getAttribute('data-id');
+      const dishName = button.closest('tr').querySelector('td:nth-child(3)').textContent;
+      
+      Swal.fire({
+        title: 'Xác nhận xóa',
+        text: `Bạn có chắc chắn muốn xóa món "${dishName}"?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Xóa',
+        cancelButtonText: 'Hủy',
+        reverseButtons: true
+      }).then((result) => {
+        if (result.isConfirmed) {
+          // AJAX call to delete the dish
+          fetch(`/api/dishes/${id}`, {
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              Swal.fire(
+                'Đã xóa!',
+                'Món Ăn đã được xóa thành công.',
+                'success'
+              ).then(() => {
+                // Reload the page to reflect changes
+                window.location.reload();
+              });
+            } else {
+              throw new Error(data.message || 'Không thể xóa món ăn');
+            }
+          })
+          .catch(error => {
+            Swal.fire(
+              'Lỗi!',
+              error.message || 'Đã xảy ra lỗi khi xóa món ăn.',
+              'error'
+            );
+          });
+        }
+      });
+    }
+  });
+</script>
+
+  <h2><%= editMode ? 'Sửa Món Ăn' : 'Thêm Món Ăn' %></h2>
+  <% if (error) { %>
+    <p class="text-danger"><%= error %></p>
+  <% } %>
+  <form action="<%= editMode ? '/admin/dishes/edit' : '/admin/dishes/add' %>" method="POST" enctype="multipart/form-data">
+    <% if (editMode) { %>
+      <input type="hidden" name="monan_id" value="<%= dish.monan_id %>">
+    <% } %>
+    <label>Tên Món</label>
+    <input type="text" name="ten_mon" value="<%= editMode ? dish.ten_mon : '' %>" required>
+
+    <label>Loại Món</label>
+    <select name="loai_id" required>
+      <option value="">Chọn loại món</option>
+      <% loai_mon_an.forEach(loai => { %>
+        <option value="<%= loai.loai_id %>" <%= editMode && dish.loai_id === loai.loai_id ? 'selected' : '' %>><%= loai.ten_loai %></option>
+      <% }) %>
+    </select>
+
+    <label>Giá (VND)</label>
+    <input type="number" name="gia" value="<%= editMode ? dish.gia : '' %>" required>
+
+    <label>Hình Ảnh</label>
+    <input type="file" name="hinh_anh">
+    <% if (editMode && dish.hinh_anh) { %>
+      <p>Hình ảnh hiện tại: <img src="/uploads/<%= dish.hinh_anh %>" width="50"></p>
+    <% } %>
+
+    <button type="submit"><%= editMode ? 'Cập Nhật' : 'Thêm' %></button>
+  </form>
+
+  <h2>Danh Sách Món Ăn</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Tên Món</th>
+        <th>Loại</th>
+        <th>Giá</th>
+        <th>Hình Ảnh</th>
+        <th>Trạng Thái</th>
+        <th>Hành Động</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (dishes && dishes.length > 0) { %>
+        <% dishes.forEach(dish => { %>
+          <tr>
+            <td><%= dish.ten_mon %></td>
+            <td><%= dish.ten_loai %></td>
+            <td><%= dish.gia %> VND</td>
+            <td>
+              <% if (dish.hinh_anh) { %>
+                <img src="/uploads/<%= dish.hinh_anh %>" width="50">
+              <% } else { %>
+                Không có hình
+              <% } %>
+            </td>
+            <td><%= dish.khoa ? 'Khóa' : 'Hoạt Động' %></td>
+            <td>
+              <form action="/admin/dishes/toggleLock" method="POST" class="d-inline">
+                <input type="hidden" name="monan_id" value="<%= dish.monan_id %>">
+                <button type="submit"><%= dish.khoa ? 'Mở Khóa' : 'Khóa' %></button>
+              </form>
+              <form action="/admin/dishes/delete" method="POST" class="d-inline">
+                <input type="hidden" name="monan_id" value="<%= dish.monan_id %>">
+                <button type="submit">Xóa</button>
+              </form>
+              <a href="/admin/dishes/edit/<%= dish.monan_id %>">Sửa</a>
+            </td>
+          </tr>
+        <% }) %>
+      <% } else { %>
+        <tr>
+          <td colspan="6">Không có món ăn nào.</td>
+        </tr>
+      <% } %>
+    </tbody>
+  </table>
+
+  <button onclick="toggleDarkMode()">Chuyển Đổi Chế Độ Tối</button>
+</div>
+<%- include('footer') %>
