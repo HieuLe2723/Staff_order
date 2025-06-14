@@ -318,6 +318,45 @@ CREATE TABLE LichSuDongBo (
     trang_thai VARCHAR(20), -- ThanhCong | ThatBai
     mo_ta VARCHAR(255)
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+-- 30. CaLamViec (Shift) table
+CREATE TABLE CaLamViec (
+    calamviec_id INT AUTO_INCREMENT PRIMARY KEY,
+    ten_ca VARCHAR(50) NOT NULL, -- e.g., Ca Sáng, Ca Tối
+    thoi_gian_bat_dau TIME NOT NULL, -- Start time of the shift
+    thoi_gian_ket_thuc TIME NOT NULL, -- End time of the shift
+    mo_ta VARCHAR(255)
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- 31. PhanCaNhanVien (Employee Shift Assignment) table
+CREATE TABLE PhanCaNhanVien (
+    phanca_id INT AUTO_INCREMENT PRIMARY KEY,
+    nhanvien_id VARCHAR(10),
+    calamviec_id INT,
+    ngay_lam DATE NOT NULL,
+    thoi_gian_check_in DATETIME,
+    thoi_gian_check_out DATETIME,
+    trang_thai VARCHAR(20) DEFAULT 'ChuaCheckIn', -- ChuaCheckIn | DaCheckIn | DaCheckOut | Nghi
+    ghi_chu VARCHAR(255),
+    FOREIGN KEY (nhanvien_id) REFERENCES NhanVien(nhanvien_id),
+    FOREIGN KEY (calamviec_id) REFERENCES CaLamViec(calamviec_id)
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- 32. LuongNhanVien (Employee Salary) table
+CREATE TABLE LuongNhanVien (
+    luong_id INT AUTO_INCREMENT PRIMARY KEY,
+    nhanvien_id VARCHAR(10),
+    phanca_id INT,
+    thang INT,
+    nam INT,
+    so_gio_lam DECIMAL(5,2), -- Total hours worked
+    luong DECIMAL(15,2), -- Calculated salary (hours * 25000 VND)
+    ngay_tinh_luong DATETIME DEFAULT CURRENT_TIMESTAMP,
+    trang_thai VARCHAR(20) DEFAULT 'ChuaThanhToan', -- ChuaThanhToan | DaThanhToan
+    FOREIGN KEY (nhanvien_id) REFERENCES NhanVien(nhanvien_id),
+    FOREIGN KEY (phanca_id) REFERENCES PhanCaNhanVien(phanca_id)
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+
 
 -- Triggers
 DELIMITER //
@@ -644,46 +683,6 @@ CREATE INDEX idx_nguyenlieu_so_luong ON NguyenLieu(so_luong_con_lai);
 CREATE INDEX idx_thietbi_trang_thai ON ThietBi(trang_thai);
 CREATE INDEX idx_phieunhap_nguyenlieu ON ChiTietPhieuNhap(nguyenlieu_id);
 CREATE INDEX idx_phieuxuat_nguyenlieu ON ChiTietPhieuXuat(nguyenlieu_id);
--- Existing database schema (omitted for brevity, assuming it remains unchanged except for new additions)
--- Add the following to the existing stafforder_mysql.sql
-
--- 30. CaLamViec (Shift) table
-CREATE TABLE CaLamViec (
-    calamviec_id INT AUTO_INCREMENT PRIMARY KEY,
-    ten_ca VARCHAR(50) NOT NULL, -- e.g., Ca Sáng, Ca Tối
-    thoi_gian_bat_dau TIME NOT NULL, -- Start time of the shift
-    thoi_gian_ket_thuc TIME NOT NULL, -- End time of the shift
-    mo_ta VARCHAR(255)
-) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
--- 31. PhanCaNhanVien (Employee Shift Assignment) table
-CREATE TABLE PhanCaNhanVien (
-    phanca_id INT AUTO_INCREMENT PRIMARY KEY,
-    nhanvien_id VARCHAR(10),
-    calamviec_id INT,
-    ngay_lam DATE NOT NULL,
-    thoi_gian_check_in DATETIME,
-    thoi_gian_check_out DATETIME,
-    trang_thai VARCHAR(20) DEFAULT 'ChuaCheckIn', -- ChuaCheckIn | DaCheckIn | DaCheckOut | Nghi
-    ghi_chu VARCHAR(255),
-    FOREIGN KEY (nhanvien_id) REFERENCES NhanVien(nhanvien_id),
-    FOREIGN KEY (calamviec_id) REFERENCES CaLamViec(calamviec_id)
-) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
--- 32. LuongNhanVien (Employee Salary) table
-CREATE TABLE LuongNhanVien (
-    luong_id INT AUTO_INCREMENT PRIMARY KEY,
-    nhanvien_id VARCHAR(10),
-    phanca_id INT,
-    thang INT,
-    nam INT,
-    so_gio_lam DECIMAL(5,2), -- Total hours worked
-    luong DECIMAL(15,2), -- Calculated salary (hours * 25000 VND)
-    ngay_tinh_luong DATETIME DEFAULT CURRENT_TIMESTAMP,
-    trang_thai VARCHAR(20) DEFAULT 'ChuaThanhToan', -- ChuaThanhToan | DaThanhToan
-    FOREIGN KEY (nhanvien_id) REFERENCES NhanVien(nhanvien_id),
-    FOREIGN KEY (phanca_id) REFERENCES PhanCaNhanVien(phanca_id)
-) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Indexes for new tables
 CREATE INDEX idx_phanca_nhanvien ON PhanCaNhanVien(nhanvien_id);
