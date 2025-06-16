@@ -25,14 +25,15 @@ const schemas = {
     password: Joi.string().min(1).required()
   }),
 
-  reservation: Joi.object({
-    khachhang_id: Joi.number().integer().min(1).required(),
-    ban_id: Joi.number().integer().min(1).required(),
-    so_khach: Joi.number().integer().min(1).required(),
-    thoi_gian_dat: Joi.string().isoDate().required(),
-    ghi_chu: Joi.string().max(255).allow(''),
+  datBan: Joi.object({
+    khachhang_id: Joi.number().integer().optional().allow(null),
+    ban_id: Joi.number().integer().optional().allow(null), // chỉ số hoặc null
+    ban_ids: Joi.array().items(Joi.number().integer()).min(1).optional(),
+    so_khach: Joi.number().integer().required(),
+    thoi_gian_dat: Joi.alternatives().try(Joi.date().iso(), Joi.string()).required(),
+    ghi_chu: Joi.string().allow('', null),
     trang_thai: Joi.string().valid('ChoXuLy', 'DaXacNhan', 'DaHuy').optional()
-  }),
+  }).or('ban_id', 'ban_ids'),
 
   order: Joi.object({
     phien_id: Joi.number().integer().min(1).required(),

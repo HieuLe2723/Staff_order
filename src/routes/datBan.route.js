@@ -15,8 +15,8 @@ router.use(loggerMiddleware);
 router.post(
   '/',
   authMiddleware,
-  roleMiddleware(['Khach Hang', 'Quan Ly', 'NhanVien']),
-  validate(schemas.reservation),
+  roleMiddleware(['Khach Hang', 'Quan Ly', 'Nhan Vien']),
+  validate(schemas.datBan),
   DatBanController.createDatBan
 );
 
@@ -38,8 +38,22 @@ router.put(
   '/:id',
   authMiddleware,
   roleMiddleware(['Quan Ly', 'Nhan Vien']),
-  validate(schemas.reservation),
+  validate(schemas.datBan),
   DatBanController.updateDatBan
+);
+
+router.patch(
+  '/:id/gan-khach-hang',
+  authMiddleware,
+  roleMiddleware(['Quan Ly', 'Nhan Vien']),
+  DatBanController.ganKhachHang
+);
+
+router.patch(
+  '/:id/huy',
+  authMiddleware,
+  roleMiddleware(['Quan Ly', 'Nhan Vien']),
+  DatBanController.huyDatBan
 );
 
 router.delete(

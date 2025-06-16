@@ -13,7 +13,7 @@ const employeeController = require('../controllers/Admin/employeeAdminController
 const revenueController = require('../controllers/Admin/revenueAdminController');
 const inventoryController = require('../controllers/Admin/inventoryAdminController');
 const dishController = require('../controllers/Admin/dishAdminController');
-const dashboardController = require('../controllers/admin/dashboardAdminController');
+const dashboardController = require('../controllers/Admin/dashboardAdminController');
 const AuthService = require('../services/auth.service');
 const AuthController = require('../controllers/auth.controller');
 

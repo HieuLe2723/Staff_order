@@ -34,7 +34,10 @@ class KhuVucModel {
       if (!rows[0]) {
         throw new Error('Zone not found');
       }
-      return rows[0];
+      // Lấy danh sách bàn của khu vực này
+      const BanNhaHangModel = require('./banNhaHang.model');
+      const ban_list = await BanNhaHangModel.findAll({ khuvuc_id });
+      return { ...rows[0], ban_list };
     } catch (error) {
       throw new Error(`Failed to find zone: ${error.message}`);
     }
@@ -46,11 +49,18 @@ class KhuVucModel {
         'SELECT khuvuc_id, ten_khuvuc, so_ban FROM KhuVuc'
       );
       console.log('Fetched KhuVuc data from DB:', rows); // Log dữ liệu từ DB
-      return rows.map(khuVuc => ({
-        khuvuc_id: khuVuc.khuvuc_id,
-        ten_khuvuc: khuVuc.ten_khuvuc,
-        so_ban: khuVuc.so_ban || 0
+      const BanNhaHangModel = require('./banNhaHang.model');
+      // Lấy danh sách bàn cho từng khu vực
+      const result = await Promise.all(rows.map(async khuVuc => {
+        const ban_list = await BanNhaHangModel.findAll({ khuvuc_id: khuVuc.khuvuc_id });
+        return {
+          khuvuc_id: khuVuc.khuvuc_id,
+          ten_khuvuc: khuVuc.ten_khuvuc,
+          so_ban: khuVuc.so_ban || 0,
+          ban_list,
+        };
       }));
+      return result;
     } catch (error) {
       throw new Error(`Failed to fetch zones: ${error.message}`);
     }

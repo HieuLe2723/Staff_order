@@ -64,7 +64,7 @@ const authMiddleware = async (req, res, next) => {
       }
 
       req.user = {
-        type: 'nhanvien',
+        type: 'Nhan Vien',
         nhanvien_id: user.nhanvien_id,
         role_id: user.role_id,
         role_name: role.role_name,
