@@ -8,10 +8,6 @@ class LayKhuVucTrinhTu {
 
   Future<List<KhuVuc>> call() async {
     final khuVucs = await _kho.layDanhSachKhuVuc();
-    return khuVucs.map((khuVuc) => KhuVuc(
-      khuvucId: khuVuc.khuvucId,
-      tenKhuvuc: khuVuc.tenKhuvuc,
-      soBan: khuVuc.soBan,
-    )).toList();
+    return khuVucs;
   }
 }

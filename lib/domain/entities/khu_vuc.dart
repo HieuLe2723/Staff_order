@@ -1,12 +1,16 @@
+import 'ban_nha_hang.dart';
+
 class KhuVuc {
   final int khuvucId;
   final String tenKhuvuc;
-  final int soBan; // Số bàn trong khu vực
+  final int soBan;
+  final List<BanNhaHang> banList; // Thêm dòng này
 
   KhuVuc({
     required this.khuvucId,
     required this.tenKhuvuc,
     required this.soBan,
+    required this.banList,
   });
 
   factory KhuVuc.fromJson(Map<String, dynamic> json) {
@@ -14,6 +18,9 @@ class KhuVuc {
       khuvucId: json['khuvuc_id'],
       tenKhuvuc: json['ten_khuvuc'],
       soBan: json['so_ban'] ?? 0,
+      banList: (json['ban_list'] as List<dynamic>? ?? [])
+          .map((e) => BanNhaHang.fromJson(e))
+          .toList(),
     );
   }
 }

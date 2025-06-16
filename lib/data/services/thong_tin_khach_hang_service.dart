@@ -25,7 +25,7 @@ class ThongTinKhachHangService {
       }
 
       final response = await http.post(
-        Uri.parse('${ApiDichVu.baseUrl}/thong-tin-khach-hang'),
+        Uri.parse('${ApiDichVu.baseUrl}/api/thong-tin-khach-hang'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',

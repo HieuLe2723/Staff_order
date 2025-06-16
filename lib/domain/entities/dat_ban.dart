@@ -2,6 +2,7 @@ class DatBan {
   final int datbanId;
   final int? khachhangId;
   final int? banId;
+  final List<int> banIds;
   final int soKhach;
   final DateTime thoiGianDat;
   final String? ghiChu;
@@ -12,6 +13,7 @@ class DatBan {
     required this.datbanId,
     this.khachhangId,
     this.banId,
+    this.banIds = const [],
     required this.soKhach,
     required this.thoiGianDat,
     this.ghiChu,
@@ -24,6 +26,7 @@ class DatBan {
       datbanId: json['datban_id'],
       khachhangId: json['khachhang_id'],
       banId: json['ban_id'],
+      banIds: (json['ban_ids'] as List?)?.map((e) => e as int).toList() ?? [],
       soKhach: json['so_khach'],
       thoiGianDat: DateTime.parse(json['thoi_gian_dat']),
       ghiChu: json['ghi_chu'],

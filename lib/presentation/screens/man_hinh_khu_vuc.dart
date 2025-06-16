@@ -5,6 +5,7 @@ import '../../domain/entities/khu_vuc.dart';
 import '../../data/services/lay_khu_vuc_trinh_tu.dart';
 import 'man_hinh_dat_ban.dart';
 import 'man_hinh_ca_lam_viec.dart';
+import '../../domain/entities/ban_nha_hang.dart';
 
 class ManHinhKhuVuc extends StatefulWidget {
   const ManHinhKhuVuc({super.key});
@@ -75,11 +76,15 @@ class _ManHinhKhuVucState extends State<ManHinhKhuVuc> {
                       return;
                     }
                     Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => DatBanScreen(khuVucs: khuVucs),
-                      ),
-                    );
+  context,
+  MaterialPageRoute(
+    builder: (context) => DatBanScreen(khuVucs: khuVucs),
+  ),
+).then((value) {
+  if (value == true) {
+    _refreshData();
+  }
+});
                   },
                 ),
                 _buildIconWithLabel(
@@ -249,6 +254,11 @@ class _ManHinhKhuVucState extends State<ManHinhKhuVuc> {
             itemCount: khuVuc.soBan,
             itemBuilder: (context, index) {
               String areaLetter = khuVuc.tenKhuvuc.replaceAll('Khu ', '');
+              final banList = khuVuc.banList ?? [];
+              BanNhaHang? ban;
+              if (banList.isNotEmpty && index < banList.length) {
+                ban = banList[index];
+              }
               return Card(
                 color: Colors.white,
                 elevation: 0,
@@ -270,10 +280,29 @@ class _ManHinhKhuVucState extends State<ManHinhKhuVuc> {
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 3),
-                      const Text(
-                        'Trống',
-                        style: TextStyle(fontSize: 12, color: Colors.black54),
-                      ),
+                      if (ban != null && ban.trangThai == 'DaDat')
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.event_busy, size: 18, color: Colors.red),
+                            SizedBox(width: 4),
+                            Text('Đã đặt', style: TextStyle(fontSize: 12, color: Colors.red)),
+                          ],
+                        )
+                      else if (ban != null && ban.trangThai == 'DangSuDung')
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.lock, size: 16, color: Colors.orange),
+                            SizedBox(width: 4),
+                            Text('Đang dùng', style: TextStyle(fontSize: 12, color: Colors.orange)),
+                          ],
+                        )
+                      else
+                        const Text(
+                          'Trống',
+                          style: TextStyle(fontSize: 12, color: Colors.black54),
+                        ),
                     ],
                   ),
                 ),
