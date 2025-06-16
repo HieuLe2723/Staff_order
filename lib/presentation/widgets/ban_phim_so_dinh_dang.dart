@@ -26,11 +26,7 @@ class BanPhimSoDinhDang extends StatelessWidget {
               if (num == -1) {
                 return _buildKey('•', () => onKeyPressed('•'));
               } else if (num == -2) {
-                return _buildKey('x', () {
-                  if (giaTriHienTai.isNotEmpty) {
-                    onKeyPressed(giaTriHienTai.substring(0, giaTriHienTai.length - 1));
-                  }
-                });
+                return _buildKey('x', () => onKeyPressed('x'));
               } else {
                 return _buildKey(num.toString(), () => onKeyPressed(num.toString()));
               }

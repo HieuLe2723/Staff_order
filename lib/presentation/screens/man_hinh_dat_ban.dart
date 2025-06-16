@@ -23,18 +23,22 @@ class _DatBanScreenState extends State<DatBanScreen> {
     final reservedBanIds = <int>{};
     for (final db in _datBanList) {
       if (db.trangThai == 'ChoXuLy' || db.trangThai == 'DaDat') {
-        if (db.banIds.isNotEmpty) {
-          reservedBanIds.addAll(db.banIds);
+        // Đảm bảo banIds luôn là list, không bao giờ null
+        if ((db.banIds ?? []).isNotEmpty) {
+          reservedBanIds.addAll(db.banIds ?? []);
         } else if (db.banId != null) {
           reservedBanIds.add(db.banId!);
         }
       }
     }
+    print('[DEBUG] _syncTableStatusWithReservations: reservedBanIds = $reservedBanIds');
     setState(() {
       _banList = _banList.map((ban) {
         if (reservedBanIds.contains(ban.banId)) {
+          print('  [SYNC] Ban ${ban.banId} chuyển sang DaDat');
           return ban.copyWith(trangThai: 'DaDat');
         } else {
+          print('  [SYNC] Ban ${ban.banId} chuyển sang SanSang');
           return ban.copyWith(trangThai: 'SanSang');
         }
       }).toList();
@@ -60,6 +64,30 @@ class _DatBanScreenState extends State<DatBanScreen> {
   List<int> _selectedBanIds = [];
   int? _selectedTableId; // Theo dõi bàn được chọn trong danh sách đặt bàn
 
+  // Widget con hiển thị trạng thái bàn
+  Widget tableStatusWidget(BanNhaHang ban) {
+    print('[TableStatusWidget] banId: ${ban.banId}, trangThai: ${ban.trangThai}');
+    if (ban.trangThai == 'DaDat') {
+      return Row(
+        children: const [
+          Icon(Icons.event_busy, size: 16, color: Colors.red),
+          SizedBox(width: 4),
+          Text('Đã đặt', style: TextStyle(fontSize: 12, color: Colors.red)),
+        ],
+      );
+    } else if (ban.trangThai == 'DangSuDung') {
+      return Row(
+        children: const [
+          Icon(Icons.lock, size: 14, color: Colors.orange),
+          SizedBox(width: 4),
+          Text('Đang dùng', style: TextStyle(fontSize: 12, color: Colors.orange)),
+        ],
+      );
+    } else {
+      return const Text('Trống', style: TextStyle(fontSize: 12, color: Colors.black54));
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -72,6 +100,7 @@ class _DatBanScreenState extends State<DatBanScreen> {
 
   Future<void> _loadBanList(int khuvucId) async {
     final bans = await _banNhaHangService.getBanListByKhuVuc(khuvucId);
+    print('[DEBUG] _loadBanList: API trả về ${bans.length} bàn: ${bans.map((b) => {"banId": b.banId, "tenBan": b.tenBan, "trangThai": b.trangThai}).toList()}');
     setState(() {
       _banList = bans;
       _selectedBanIds.clear();
@@ -114,17 +143,33 @@ class _DatBanScreenState extends State<DatBanScreen> {
   Future<void> _loadDatBanList() async {
     if (_selectedKhuVuc == null) return;
     try {
-      final datBans = await _datBanService.getAllDatBan(khuVucId: _selectedKhuVuc!.khuvucId);
+      // Truyền filter trạng thái khi lấy danh sách đặt bàn
+      String? trangThai;
+      if (_filterStatus == 'cancelled') {
+        trangThai = 'DaHuy';
+      } else if (_filterStatus == 'approved') {
+        trangThai = null; // hoặc truyền trạng thái phù hợp nếu có (ví dụ: 'DaDat', 'ChoXuLy')
+      }
+      final datBans = await _datBanService.getAllDatBan(
+        khuVucId: _selectedKhuVuc!.khuvucId,
+        trangThai: trangThai,
+      );
+      print('[DEBUG] _loadDatBanList: API trả về ${datBans.length} đặt bàn: ');
+      for (final db in datBans) {
+        print('  datbanId: ${db.datbanId}, hoTen: ${db.hoTen ?? ''}, soDienThoai: ${db.soDienThoai}, banIds: ${db.banIds}, banTenList: ${db.banTenList}, trangThai: ${db.trangThai}');
+      }
       setState(() {
         _datBanList = datBans;
         _datBanGroupList = datBans.map((db) => DatBanGroup.fromDatBanList(
           [db],
-          _hoTenController.text.isNotEmpty ? _hoTenController.text : '',
-          _banList.where((b) => db.banId == b.banId).map((b) => b.tenBan).toList().isNotEmpty
-            ? _banList.where((b) => db.banId == b.banId).map((b) => b.tenBan).toList()
-            : [''],
-          soDienThoai: _soDienThoaiController.text.isNotEmpty ? _soDienThoaiController.text : '',
+          db.hoTen ?? '',
+          db.banTenList,
+          soDienThoai: db.soDienThoai ?? '',
         )).toList();
+        print('[DEBUG] _datBanGroupList cập nhật:');
+        for (final group in _datBanGroupList) {
+          print('  groupId: ${group.datbanId}, tenKhachHang: ${group.tenKhachHang}, soDienThoai: ${group.soDienThoai}, tenBans: ${group.tenBans}, trangThai: ${group.trangThai}');
+        }
       });
       _syncTableStatusWithReservations(); // Đồng bộ trạng thái bàn ngay sau khi load đặt bàn
     } catch (e) {
@@ -136,7 +181,11 @@ class _DatBanScreenState extends State<DatBanScreen> {
   }
 
   Future<void> _submitReservation() async {
-    // Luôn hiển thị form đặt bàn khi nhấn nút ĐẶT BÀN, không kiểm tra chọn bàn ở đây
+    // Luôn luôn lấy lại danh sách bàn mới nhất từ API cho khu vực đang chọn
+    if (_selectedKhuVuc != null) {
+      await _loadBanList(_selectedKhuVuc!.khuvucId);
+    }
+    // Hiển thị form đặt bàn
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
@@ -151,14 +200,29 @@ class _DatBanScreenState extends State<DatBanScreen> {
                   children: [
                     TextFormField(
                       controller: _hoTenController,
-                      decoration: const InputDecoration(labelText: 'Họ tên'),
-                      validator: (value) => value!.isEmpty ? 'Vui lòng nhập họ tên' : null,
+                      decoration: const InputDecoration(
+                        labelText: 'Tên khách hàng',
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Vui lòng nhập tên khách hàng';
+                        }
+                        return null;
+                      },
                     ),
+                    SizedBox(height: 8),
                     TextFormField(
                       controller: _soDienThoaiController,
-                      decoration: const InputDecoration(labelText: 'Số điện thoại'),
+                      decoration: const InputDecoration(
+                        labelText: 'Số điện thoại',
+                      ),
                       keyboardType: TextInputType.phone,
-                      validator: (value) => value!.isEmpty ? 'Vui lòng nhập số điện thoại' : null,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Vui lòng nhập số điện thoại';
+                        }
+                        return null;
+                      },
                     ),
                     TextFormField(
                       controller: _emailController,
@@ -180,7 +244,7 @@ class _DatBanScreenState extends State<DatBanScreen> {
                         Expanded(
                           child: Text(
                             _thoiGianDat != null
-                                ? 'Thời gian: ${_thoiGianDat!.toLocal().toString().split('.')[0]}'
+                                ? 'Thời gian: ${_thoiGianDat ?? DateTime.now().toLocal().toString().split('.')[0]}'
                                 : 'Chọn thời gian',
                           ),
                         ),
@@ -210,12 +274,12 @@ class _DatBanScreenState extends State<DatBanScreen> {
                               label: Text(khuVuc.tenKhuvuc),
                               selected: isSelected,
                               selectedColor: Colors.blue.shade100,
-                              onSelected: (_) {
+                              onSelected: (_) async {
                                 setState(() {
                                   _selectedKhuVuc = khuVuc;
                                   _selectedBanIds = [];
                                 });
-                                _loadBanList(khuVuc.khuvucId);
+                                await _loadBanList(khuVuc.khuvucId);
                               },
                             ),
                           );
@@ -320,14 +384,22 @@ class _DatBanScreenState extends State<DatBanScreen> {
           khachHangId: null,
           banIds: _selectedBanIds,
           soKhach: int.parse(_soKhachController.text),
-          thoiGianDat: _thoiGianDat!,
+          thoiGianDat: _thoiGianDat ?? DateTime.now(),
           ghiChu: _ghiChuController.text.isNotEmpty ? _ghiChuController.text : null,
+          hoTen: _hoTenController.text.trim(),
+          soDienThoai: _soDienThoaiController.text.trim(),
         );
         // Group các DatBan vừa đặt thành 1 DatBanGroup cho UI
         final tenBans = datBans.map((d) {
           final ban = _banList.firstWhere(
             (b) => b.banId == d.banId,
-            orElse: () => BanNhaHang(banId: d.banId!, tenBan: 'B${d.banId}', khuvucId: 0, trangThai: '', qrCodeUrl: null),
+            orElse: () => BanNhaHang(
+              banId: d.banId ?? 0,
+              tenBan: 'B${d.banId ?? ""}',
+              khuvucId: 0,
+              trangThai: '',
+              qrCodeUrl: null,
+            ),
           );
           return ban.tenBan;
         }).toList();
@@ -344,7 +416,10 @@ class _DatBanScreenState extends State<DatBanScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Đặt bàn thành công!')),
         );
-        await _reloadBanAndDatBan(); // Reload lại cả danh sách bàn và đặt bàn sau khi đặt thành công
+        // Reload lại danh sách bàn và đặt bàn sau khi đặt thành công
+        await _reloadBanAndDatBan();
+        // KHÔNG pop màn hình, chỉ cập nhật danh sách bàn và hiển thị thông báo thành công
+        // Khi nhấn back mới quay về khu vực
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Lỗi: $e')),
@@ -406,6 +481,7 @@ class _DatBanScreenState extends State<DatBanScreen> {
                       await _datBanService.ganKhachHangVaoDatBan(datBanId, khachHang.khachhangId);
                     }
                     Navigator.pop(context);
+                    await _reloadBanAndDatBan(); // Reload lại danh sách đặt bàn để hiển thị tên/sđt mới
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text('Đã thêm thông tin khách hàng cho đặt bàn!')),
                     );
@@ -424,44 +500,18 @@ class _DatBanScreenState extends State<DatBanScreen> {
     // Không hiển thị dialog thành công khi đặt bàn
   }
 
-  void _deleteReservation(int datbanId) {
-    setState(() {
-      // Chuyển trạng thái DatBanGroup sang Đã hủy
-      final idx = _datBanGroupList.indexWhere((g) => g.datbanId == datbanId);
-      if (idx != -1) {
-        final old = _datBanGroupList[idx];
-        _datBanGroupList[idx] = DatBanGroup(
-          datbanId: old.datbanId,
-          banIds: old.banIds,
-          tenBans: old.tenBans,
-          tenKhachHang: old.tenKhachHang,
-          soKhach: old.soKhach,
-          thoiGianDat: old.thoiGianDat,
-          ghiChu: old.ghiChu,
-          trangThai: "DaHuy",
-          ngayTao: old.ngayTao,
-        );
-      }
-      // Cập nhật trạng thái bàn về SanSang
-      for (final banId in _datBanGroupList[idx].banIds) {
-        final banIdx = _banList.indexWhere((b) => b.banId == banId);
-        if (banIdx != -1) {
-          _banList[banIdx] = BanNhaHang(
-            banId: _banList[banIdx].banId,
-            tenBan: _banList[banIdx].tenBan,
-            khuvucId: _banList[banIdx].khuvucId,
-            trangThai: "SanSang",
-            qrCodeUrl: _banList[banIdx].qrCodeUrl,
-          );
-        }
-      }
-      if (_selectedTableId == datbanId) {
-        _selectedTableId = null;
-      }
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Đã xóa đặt bàn thành công.')),
-    );
+  Future<void> _deleteReservation(int datbanId) async {
+    final success = await _datBanService.huyDatBan(datbanId);
+    if (success) {
+      await _reloadBanAndDatBan();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đã hủy đặt bàn thành công.')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Lỗi khi hủy đặt bàn.')),
+      );
+    }
   }
 
   void _moveTable(int datbanId) {
@@ -603,12 +653,16 @@ class _DatBanScreenState extends State<DatBanScreen> {
                                     ],
                                   ),
                                   Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      const Text('Tên'),
-                                      Text(group.tenKhachHang.isNotEmpty ? group.tenKhachHang : 'Chưa nhập'),
-                                    ],
-                                  ),
+  crossAxisAlignment: CrossAxisAlignment.start,
+  children: [
+    if (group.tenKhachHang.isNotEmpty)
+      Text(group.tenKhachHang, style: const TextStyle(fontWeight: FontWeight.bold))
+    else if ((group.soDienThoai ?? '').isNotEmpty)
+      Text(group.soDienThoai ?? '', style: const TextStyle(fontWeight: FontWeight.bold))
+    else
+      const Text('(Chưa nhập tên hoặc SĐT)', style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey)),
+  ],
+),
                                   Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
@@ -624,20 +678,23 @@ class _DatBanScreenState extends State<DatBanScreen> {
                                     ],
                                   ),
                                   Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      const Text('Bàn'),
-                                      Text(group.tenBans.join(", ")),
-                                    ],
-                                  ),
+  crossAxisAlignment: CrossAxisAlignment.start,
+  children: [
+    const Text('Bàn'),
+    if (group.tenBans.isNotEmpty)
+      Text(group.tenBans.join(', '), style: const TextStyle(fontWeight: FontWeight.bold))
+    else
+      const Text('(Chưa có bàn)', style: TextStyle(color: Colors.red)),
+  ],
+),
                                   Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       const Text('Ghi chú'),
                                       Text(
-                                        group.ghiChu != null && group.ghiChu!.length > 10
-                                            ? '${group.ghiChu!.substring(0, 10)}...'
-                                            : group.ghiChu ?? '',
+                                        (group.ghiChu ?? '').length > 10
+                                            ? '${(group.ghiChu ?? '').substring(0, 10)}...'
+                                            : (group.ghiChu ?? ''),
                                       ),
                                     ],
                                   ),

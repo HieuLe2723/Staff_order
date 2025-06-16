@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:staff_order_restaurant/presentation/screens/man_hinh_dang_nhap.dart';
-
+import 'package:staff_order_restaurant/presentation/screens/route_observer.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized(); // Ensure Flutter bindings are initialized for async operations
   // Clear the token on app startup
@@ -21,6 +21,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(primarySwatch: Colors.blue),
       debugShowCheckedModeBanner: false,
       home: const ManHinhDangNhap(),
+      navigatorObservers: [routeObserver],
     );
   }
 }

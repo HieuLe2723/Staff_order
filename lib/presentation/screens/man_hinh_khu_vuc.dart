@@ -6,6 +6,7 @@ import '../../data/services/lay_khu_vuc_trinh_tu.dart';
 import 'man_hinh_dat_ban.dart';
 import 'man_hinh_ca_lam_viec.dart';
 import '../../domain/entities/ban_nha_hang.dart';
+import 'route_observer.dart';
 
 class ManHinhKhuVuc extends StatefulWidget {
   const ManHinhKhuVuc({super.key});
@@ -14,7 +15,7 @@ class ManHinhKhuVuc extends StatefulWidget {
   _ManHinhKhuVucState createState() => _ManHinhKhuVucState();
 }
 
-class _ManHinhKhuVucState extends State<ManHinhKhuVuc> {
+class _ManHinhKhuVucState extends State<ManHinhKhuVuc> with RouteAware {
   late Future<List<KhuVuc>> _khuVucFuture;
   bool _isShowingTables = false;
   KhuVuc? _selectedKhuVuc;
@@ -25,8 +26,31 @@ class _ManHinhKhuVucState extends State<ManHinhKhuVuc> {
     _khuVucFuture = LayKhuVucTrinhTu(KhuVucKho()).call();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route is PageRoute) {
+      routeObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void dispose() {
+    routeObserver.unsubscribe(this);
+    super.dispose();
+  }
+
+  @override
+  void didPopNext() {
+    // Khi quay lại màn hình này từ màn khác, luôn reload lại danh sách khu vực và bàn từ backend
+    _refreshData();
+    setState(() {}); // ép rebuild lại UI để cập nhật trạng thái bàn
+  }
+
   void _refreshData() {
     setState(() {
+      // Luôn gọi API backend để lấy dữ liệu mới nhất, tránh lấy cache
       _khuVucFuture = LayKhuVucTrinhTu(KhuVucKho()).call();
     });
   }
@@ -68,24 +92,25 @@ class _ManHinhKhuVucState extends State<ManHinhKhuVuc> {
                   icon: const Icon(Icons.event_available, color: Colors.blue),
                   label: 'Đặt bàn',
                   onPressed: () async {
-                    final khuVucs = await _khuVucFuture;
+                    // Luôn lấy lại danh sách khu vực mới nhất từ backend
+                    final khuVucs = await LayKhuVucTrinhTu(KhuVucKho()).call();
                     if (khuVucs.isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('Không có khu vực nào để đặt bàn.')),
                       );
                       return;
                     }
-                    Navigator.push(
-  context,
-  MaterialPageRoute(
-    builder: (context) => DatBanScreen(khuVucs: khuVucs),
-  ),
-).then((value) {
-  if (value == true) {
-    _refreshData();
-  }
-});
+                    final result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => DatBanScreen(khuVucs: khuVucs),
+                      ),
+                    );
+                    if (result == true) {
+                      _refreshData();
+                    }
                   },
+
                 ),
                 _buildIconWithLabel(
                   icon: const Icon(Icons.support_agent, color: Colors.blue),

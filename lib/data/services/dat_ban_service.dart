@@ -5,10 +5,69 @@ import '../../domain/entities/dat_ban.dart';
 import 'api_dich_vu.dart';
 
 class DatBanService {
+  /// Hủy đặt bàn (mềm), chuyển trạng thái đặt bàn sang 'Đã hủy' và trả bàn về trạng thái 'Sẵn sàng'.
+  /// Dùng cho cả trường hợp đặt 1 bàn hoặc nhiều bàn (truyền đúng datBanId).
+  Future<bool> huyDatBan(int datBanId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwt_token');
+      if (token == null) {
+        throw Exception('Không tìm thấy token. Vui lòng đăng nhập lại.');
+      }
+      final response = await http.patch(
+        Uri.parse('${ApiDichVu.baseUrl}/api/dat-ban/$datBanId/huy'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+      if (response.statusCode == 200) {
+        return true;
+      } else if (response.statusCode == 401) {
+        await prefs.remove('jwt_token');
+        throw Exception('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+      } else {
+        throw Exception('Không thể hủy đặt bàn: ${response.body}');
+      }
+    } catch (e) {
+      print('Lỗi khi hủy đặt bàn: $e');
+      return false;
+    }
+  }
+
+  /// Xóa đặt bàn (cứng), chỉ dùng cho admin hoặc cleanup. Truyền đúng datBanId.
+  Future<bool> xoaDatBan(int datBanId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwt_token');
+      if (token == null) {
+        throw Exception('Không tìm thấy token. Vui lòng đăng nhập lại.');
+      }
+      final response = await http.delete(
+        Uri.parse('${ApiDichVu.baseUrl}/api/dat-ban/$datBanId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+      if (response.statusCode == 200) {
+        return true;
+      } else if (response.statusCode == 401) {
+        await prefs.remove('jwt_token');
+        throw Exception('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+      } else {
+        throw Exception('Không thể xóa đặt bàn: ${response.body}');
+      }
+    } catch (e) {
+      print('Lỗi khi xóa đặt bàn: $e');
+      return false;
+    }
+  }
+
   final ApiDichVu _apiService = ApiDichVu();
 
   // Fetch all reservations (optionally filter by area/date)
-  Future<List<DatBan>> getAllDatBan({int? khuVucId, DateTime? date}) async {
+  Future<List<DatBan>> getAllDatBan({int? khuVucId, DateTime? date, String? trangThai}) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('jwt_token');
@@ -19,6 +78,7 @@ class DatBanService {
       Map<String, String> queryParams = {};
       if (khuVucId != null) queryParams['khuvuc_id'] = khuVucId.toString();
       if (date != null) queryParams['date'] = date.toIso8601String();
+      if (trangThai != null) queryParams['trang_thai'] = trangThai;
       if (queryParams.isNotEmpty) {
         url += '?' + Uri(queryParameters: queryParams).query;
       }
@@ -53,6 +113,8 @@ class DatBanService {
     required int soKhach,
     required DateTime thoiGianDat,
     String? ghiChu,
+    String? hoTen,
+    String? soDienThoai,
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -76,8 +138,14 @@ class DatBanService {
       if (khachHangId != null) {
         payload['khachhang_id'] = khachHangId;
       }
-      if (ghiChu != null && ghiChu.toString().trim().isNotEmpty) {
-        payload['ghi_chu'] = ghiChu.toString();
+      if (hoTen != null && hoTen.isNotEmpty) {
+        payload['ho_ten'] = hoTen;
+      }
+      if (soDienThoai != null && soDienThoai.isNotEmpty) {
+        payload['so_dien_thoai'] = soDienThoai;
+      }
+      if (ghiChu != null && ghiChu.isNotEmpty) {
+        payload['ghi_chu'] = ghiChu;
       }
       final response = await http.post(
         Uri.parse('${ApiDichVu.baseUrl}/api/dat-ban'),
@@ -90,14 +158,26 @@ class DatBanService {
 
       if (response.statusCode == 201) {
         final data = jsonDecode(response.body);
-        if (data['data'] is List) {
-          // Multi-table booking: return list of DatBan
-          return (data['data'] as List)
+        final dynamic raw = data['data'];
+        // Always treat as a list for consistency
+        if (raw is List) {
+          return raw
+              .where((e) => e != null)
               .map((e) => DatBan.fromJson(e as Map<String, dynamic>))
               .toList();
+        } else if (raw is Map<String, dynamic>) {
+          return [DatBan.fromJson(raw)];
+        } else if (raw != null) {
+          // Defensive: try to parse as Map if possible
+          try {
+            return [DatBan.fromJson(Map<String, dynamic>.from(raw))];
+          } catch (_) {
+            // Malformed backend data
+            throw Exception('Dữ liệu trả về từ máy chủ không hợp lệ.');
+          }
         } else {
-          // Single booking: return list with one DatBan
-          return [DatBan.fromJson(data['data'] as Map<String, dynamic>)];
+          // Backend returned no data
+          throw Exception('Không nhận được dữ liệu đặt bàn từ máy chủ.');
         }
       } else if (response.statusCode == 401) {
         await prefs.remove('jwt_token');
