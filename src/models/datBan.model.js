@@ -14,7 +14,7 @@ class DatBanModel {
   }
   // Tạo đơn đặt bàn (chỉ cho 1 bàn, dùng cho group sẽ xử lý ở service)
   static async create({ khachhang_id, ban_id, so_khach, thoi_gian_dat, ghi_chu, trang_thai = 'ChoXuLy' }) {
-    const validStatuses = ['ChoXuLy', 'DaXacNhan', 'DaHuy'];
+    const validStatuses = ['ChoXuLy', 'DaXacNhan', 'DaHuy', 'DaDat'];
     if (trang_thai && !validStatuses.includes(trang_thai)) {
       throw new Error('Giá trị trang_thai không hợp lệ. Chỉ chấp nhận: ChoXuLy, DaXacNhan, DaHuy');
     }
@@ -60,8 +60,17 @@ class DatBanModel {
     if (trang_thai) { query += ' AND d.trang_thai = ?'; params.push(trang_thai); }
     const [rows] = await pool.query(query, params);
     // Lấy ban_ids cho từng datban
+    const BanNhaHangModel = require('./banNhaHang.model');
     for (const row of rows) {
       row.ban_ids = await DatBanModel.getBanIdsByDatBanId(row.datban_id);
+      // Lấy danh sách tên bàn tương ứng
+      if (row.ban_ids && row.ban_ids.length > 0) {
+        const placeholders = row.ban_ids.map(() => '?').join(',');
+        const [banRows] = await pool.query(`SELECT ten_ban FROM BanNhaHang WHERE ban_id IN (${placeholders})`, row.ban_ids);
+        row.ban_ten_list = banRows.map(b => b.ten_ban);
+      } else {
+        row.ban_ten_list = [];
+      }
     }
     return rows;
   }
@@ -83,14 +92,23 @@ class DatBanModel {
     }
     const [rows] = await pool.query(query, params);
     // Lấy ban_ids cho từng datban
+    const BanNhaHangModel = require('./banNhaHang.model');
     for (const row of rows) {
       row.ban_ids = await DatBanModel.getBanIdsByDatBanId(row.datban_id);
+      // Lấy danh sách tên bàn tương ứng
+      if (row.ban_ids && row.ban_ids.length > 0) {
+        const placeholders = row.ban_ids.map(() => '?').join(',');
+        const [banRows] = await pool.query(`SELECT ten_ban FROM BanNhaHang WHERE ban_id IN (${placeholders})`, row.ban_ids);
+        row.ban_ten_list = banRows.map(b => b.ten_ban);
+      } else {
+        row.ban_ten_list = [];
+      }
     }
     return rows;
   }
 
   static async update(datban_id, { khachhang_id, ban_id, so_khach, thoi_gian_dat, ghi_chu, trang_thai }) {
-    const validStatuses = ['ChoXuLy', 'DaXacNhan', 'DaHuy'];
+    const validStatuses = ['ChoXuLy', 'DaXacNhan', 'DaHuy', 'DaDat'];
     if (trang_thai && !validStatuses.includes(trang_thai)) {
       throw new Error('Giá trị trang_thai không hợp lệ. Chỉ chấp nhận: ChoXuLy, DaXacNhan, DaHuy');
     }

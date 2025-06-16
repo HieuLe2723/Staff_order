@@ -99,11 +99,16 @@ class DatBanService {
   }
 
   static async deleteDatBan(datban_id, user) {
-    if (!['Quan Ly'].includes(user.role_name)) {
-      throw new Error('Chỉ quản lý mới có thể xóa đặt bàn');
+    // Không phân biệt quyền, ai cũng được phép xóa (theo yêu cầu mới)
+    // Chỉ cập nhật trạng thái đặt bàn thành 'DaHuy', không xóa cứng
+    await DatBanModel.update(datban_id, { trang_thai: 'DaHuy' });
+    // Cập nhật trạng thái các bàn liên quan về 'SanSang'
+    const banIds = await DatBanModel.getBanIdsByDatBanId(datban_id);
+    const BanNhaHangModel = require('../models/banNhaHang.model');
+    for (const ban_id of banIds) {
+      await BanNhaHangModel.update(ban_id, { trang_thai: 'SanSang' });
     }
-
-    return await DatBanModel.delete(datban_id);
+    return { datban_id, trang_thai: 'DaHuy' };
   }
 
   static async ganKhachHang(datban_id, khachhang_id, user) {

@@ -2,6 +2,14 @@
 const pool = require('../config/db.config');
 
 class ThongTinKhachHangModel {
+  // Tìm khách hàng theo số điện thoại
+  static async findByPhone(so_dien_thoai) {
+    const [rows] = await pool.query(
+      'SELECT * FROM ThongTinKhachHang WHERE so_dien_thoai = ?',
+      [so_dien_thoai]
+    );
+    return rows[0] || null;
+  }
   static async create({ ho_ten, so_dien_thoai, email, quoc_tich, nhom_tuoi, loai_nhom }) {
     const [result] = await pool.query(
       'INSERT INTO ThongTinKhachHang (ho_ten, so_dien_thoai, email, quoc_tich, nhom_tuoi, loai_nhom) VALUES (?, ?, ?, ?, ?, ?)',

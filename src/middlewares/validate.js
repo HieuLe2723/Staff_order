@@ -32,7 +32,9 @@ const schemas = {
     so_khach: Joi.number().integer().required(),
     thoi_gian_dat: Joi.alternatives().try(Joi.date().iso(), Joi.string()).required(),
     ghi_chu: Joi.string().allow('', null),
-    trang_thai: Joi.string().valid('ChoXuLy', 'DaXacNhan', 'DaHuy').optional()
+    trang_thai: Joi.string().valid('ChoXuLy', 'DaXacNhan', 'DaHuy', 'DaDat').optional(),
+    ho_ten: Joi.string().max(100).allow('', null), // bổ sung
+    so_dien_thoai: Joi.string().pattern(/^((\+84|0)[0-9]{9,10})$/).allow('', null) // bổ sung
   }).or('ban_id', 'ban_ids'),
 
   order: Joi.object({

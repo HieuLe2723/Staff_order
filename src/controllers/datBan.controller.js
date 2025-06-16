@@ -31,7 +31,22 @@ class DatBanController {
 
   static async createDatBan(req, res, next) {
     try {
-      const { khachhang_id, ban_id, ban_ids, so_khach, thoi_gian_dat, ghi_chu, trang_thai } = req.body;
+      let { khachhang_id, ban_id, ban_ids, so_khach, thoi_gian_dat, ghi_chu, trang_thai, ho_ten, so_dien_thoai } = req.body;
+
+      // Nếu chưa có khachhang_id nhưng có số điện thoại hoặc tên thì kiểm tra trùng số điện thoại trước khi tạo mới
+      if (!khachhang_id && (ho_ten || so_dien_thoai)) {
+        const ThongTinKhachHangModel = require('../models/thongTinKhachHang.model');
+        let existingKhach = null;
+        if (so_dien_thoai) {
+          existingKhach = await ThongTinKhachHangModel.findByPhone(so_dien_thoai);
+        }
+        if (existingKhach) {
+          khachhang_id = existingKhach.khachhang_id;
+        } else {
+          const newKhach = await ThongTinKhachHangModel.create({ ho_ten: ho_ten || '', so_dien_thoai: so_dien_thoai || '', email: null, quoc_tich: null, nhom_tuoi: null, loai_nhom: null });
+          khachhang_id = newKhach.khachhang_id;
+        }
+      }
       if (Array.isArray(ban_ids) && ban_ids.length > 0) {
         // Đặt nhiều bàn: chuẩn hóa, chỉ tạo 1 mã đặt bàn, lưu vào bảng phụ
         const sanitizedData = {
@@ -43,7 +58,34 @@ class DatBanController {
           trang_thai,
         };
         const datBan = await DatBanService.createDatBanGroup(sanitizedData, req.user);
-        return res.status(201).json(ResponseUtils.success(datBan, 'Đặt nhiều bàn thành công', 201));
+        // Always return an array of objects with all fields present
+        let datBanList = [];
+        if (Array.isArray(datBan)) {
+          datBanList = datBan.map(item => ({
+            datban_id: item.datban_id ?? 0,
+            khachhang_id: item.khachhang_id ?? null,
+            ban_id: item.ban_id ?? null,
+            ban_ids: Array.isArray(item.ban_ids) ? item.ban_ids : [],
+            so_khach: item.so_khach ?? 0,
+            thoi_gian_dat: item.thoi_gian_dat ?? '',
+            ghi_chu: item.ghi_chu ?? '',
+            trang_thai: item.trang_thai ?? '',
+            ngay_tao: item.ngay_tao ? (typeof item.ngay_tao === 'string' ? item.ngay_tao : new Date(item.ngay_tao).toISOString()) : new Date().toISOString(),
+          }));
+        } else if (datBan) {
+          datBanList = [{
+            datban_id: datBan.datban_id ?? 0,
+            khachhang_id: datBan.khachhang_id ?? null,
+            ban_id: datBan.ban_id ?? null,
+            ban_ids: Array.isArray(datBan.ban_ids) ? datBan.ban_ids : [],
+            so_khach: datBan.so_khach ?? 0,
+            thoi_gian_dat: datBan.thoi_gian_dat ?? '',
+            ghi_chu: datBan.ghi_chu ?? '',
+            trang_thai: datBan.trang_thai ?? '',
+            ngay_tao: datBan.ngay_tao ? (typeof datBan.ngay_tao === 'string' ? datBan.ngay_tao : new Date(datBan.ngay_tao).toISOString()) : new Date().toISOString(),
+          }];
+        }
+        return res.status(201).json(ResponseUtils.success(datBanList, 'Đặt nhiều bàn thành công', 201));
       } else {
         // Đặt 1 bàn (tương thích cũ)
         const sanitizedData = {
@@ -55,7 +97,19 @@ class DatBanController {
           trang_thai,
         };
         const datBan = await DatBanService.createDatBan(sanitizedData, req.user);
-        return res.status(201).json(ResponseUtils.success(datBan, 'Đặt bàn thành công', 201));
+        // Always return a single object with all fields present
+        const resultObj = {
+          datban_id: datBan.datban_id ?? 0,
+          khachhang_id: datBan.khachhang_id ?? null,
+          ban_id: datBan.ban_id ?? null,
+          ban_ids: Array.isArray(datBan.ban_ids) ? datBan.ban_ids : [],
+          so_khach: datBan.so_khach ?? 0,
+          thoi_gian_dat: datBan.thoi_gian_dat ?? '',
+          ghi_chu: datBan.ghi_chu ?? '',
+          trang_thai: datBan.trang_thai ?? '',
+          ngay_tao: datBan.ngay_tao ? (typeof datBan.ngay_tao === 'string' ? datBan.ngay_tao : new Date(datBan.ngay_tao).toISOString()) : new Date().toISOString(),
+        };
+        return res.status(201).json(ResponseUtils.success(resultObj, 'Đặt bàn thành công', 201));
       }
     } catch (err) {
       next(err);
