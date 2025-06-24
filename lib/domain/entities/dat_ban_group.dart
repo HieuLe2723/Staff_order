@@ -11,6 +11,7 @@ class DatBanGroup {
   final String? ghiChu;
   final String trangThai;
   final DateTime ngayTao;
+  final int? phienId; // Thêm trường phienId
 
   DatBanGroup({
     required this.datbanId,
@@ -23,6 +24,7 @@ class DatBanGroup {
     required this.trangThai,
     required this.ngayTao,
     this.soDienThoai,
+    this.phienId,
   });
 
   // Factory hỗ trợ chuyển từ list DatBan và tên khách hàng
@@ -34,7 +36,6 @@ class DatBanGroup {
         allTenBans.addAll(e.banTenList);
       }
     }
-    final finalTenBans = allTenBans.isNotEmpty ? allTenBans.toList() : tenBans;
 
     // Lấy tất cả banIds từ các DatBan (ưu tiên lấy từ e.banIds, nếu không có thì lấy e.banId)
     final allBanIds = <int>{};
@@ -58,6 +59,24 @@ class DatBanGroup {
       trangThai: first?.trangThai ?? '',
       ngayTao: first?.ngayTao ?? DateTime.now(),
       soDienThoai: soDienThoai ?? '', // always a string
+      phienId: first?.phienId, // Thêm dòng này để giữ phienId
+    );
+  }
+
+  // Factory tạo group giả lập từ 1 bàn, dùng cho hiển thị bàn chưa có đặt bàn
+  factory DatBanGroup.fakeFromBan(dynamic ban) {
+    return DatBanGroup(
+      datbanId: 0,
+      banIds: [ban.banId],
+      tenBans: [ban.tenBan],
+      tenKhachHang: '',
+      soKhach: 0,
+      thoiGianDat: DateTime.now(),
+      ghiChu: '',
+      trangThai: ban.trangThai ?? 'SanSang',
+      ngayTao: DateTime.now(),
+      soDienThoai: '',
+      phienId: null, // Không có phienId cho bàn giả lập
     );
   }
 }

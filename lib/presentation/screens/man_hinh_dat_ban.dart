@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../data/services/dat_ban_service.dart';
 import '../../data/services/thong_tin_khach_hang_service.dart';
 import '../../domain/entities/dat_ban.dart';
@@ -24,8 +25,8 @@ class _DatBanScreenState extends State<DatBanScreen> {
     for (final db in _datBanList) {
       if (db.trangThai == 'ChoXuLy' || db.trangThai == 'DaDat') {
         // Đảm bảo banIds luôn là list, không bao giờ null
-        if ((db.banIds ?? []).isNotEmpty) {
-          reservedBanIds.addAll(db.banIds ?? []);
+        if (db.banIds.isNotEmpty) {
+          reservedBanIds.addAll(db.banIds);
         } else if (db.banId != null) {
           reservedBanIds.add(db.banId!);
         }
@@ -53,6 +54,7 @@ class _DatBanScreenState extends State<DatBanScreen> {
   final _emailController = TextEditingController();
   final _soKhachController = TextEditingController();
   final _ghiChuController = TextEditingController();
+  final TextEditingController _soTienCocController = TextEditingController(text: '0');
   DateTime? _thoiGianDat;
   final DatBanService _datBanService = DatBanService();
   final ThongTinKhachHangService _khachHangService = ThongTinKhachHangService();
@@ -146,7 +148,7 @@ class _DatBanScreenState extends State<DatBanScreen> {
       // Truyền filter trạng thái khi lấy danh sách đặt bàn
       String? trangThai;
       if (_filterStatus == 'cancelled') {
-        trangThai = 'DaHuy';
+        trangThai = 'SanSang';
       } else if (_filterStatus == 'approved') {
         trangThai = null; // hoặc truyền trạng thái phù hợp nếu có (ví dụ: 'DaDat', 'ChoXuLy')
       }
@@ -160,15 +162,33 @@ class _DatBanScreenState extends State<DatBanScreen> {
       }
       setState(() {
         _datBanList = datBans;
-        _datBanGroupList = datBans.map((db) => DatBanGroup.fromDatBanList(
-          [db],
-          db.hoTen ?? '',
-          db.banTenList,
-          soDienThoai: db.soDienThoai ?? '',
-        )).toList();
+        _datBanGroupList = datBans.map((db) {
+          // Nếu banTenList rỗng, tự lấy tên bàn từ _banList
+          List<String> tenBans = (db.banTenList.isNotEmpty)
+              ? db.banTenList
+              : (db.banIds.isNotEmpty)
+                  ? db.banIds.map((id) =>
+                      _banList.firstWhere((b) => b.banId == id, orElse: () => BanNhaHang(banId: id, tenBan: 'B$id', khuvucId: 0, trangThai: '', qrCodeUrl: null)).tenBan
+                    ).toList()
+                  : (db.banId != null
+                      ? [
+                          _banList.firstWhere((b) => b.banId == db.banId, orElse: () => BanNhaHang(banId: db.banId!, tenBan: 'B${db.banId}', khuvucId: 0, trangThai: '', qrCodeUrl: null)).tenBan
+                        ]
+                      : []);
+          // Thêm log kiểm tra phienId
+          print('[DEBUG][DatBanGroup] Tạo group cho datbanId: \\${db.datbanId}, phienId: \\${db.phienId}, banIds: \\${db.banIds}, banTenList: \\${db.banTenList}');
+          final group = DatBanGroup.fromDatBanList(
+            [db],
+            db.hoTen ?? '',
+            tenBans,
+            soDienThoai: db.soDienThoai ?? '',
+          );
+          print('[DEBUG][DatBanGroup] Group tạo ra: datbanId: \\${group.datbanId}, phienId: \\${group.phienId}, tenBans: \\${group.tenBans}');
+          return group;
+        }).toList();
         print('[DEBUG] _datBanGroupList cập nhật:');
         for (final group in _datBanGroupList) {
-          print('  groupId: ${group.datbanId}, tenKhachHang: ${group.tenKhachHang}, soDienThoai: ${group.soDienThoai}, tenBans: ${group.tenBans}, trangThai: ${group.trangThai}');
+          print('  groupId: \\${group.datbanId}, tenKhachHang: \\${group.tenKhachHang}, soDienThoai: \\${group.soDienThoai}, tenBans: \\${group.tenBans}, trangThai: \\${group.trangThai}, phienId: \\${group.phienId}');
         }
       });
       _syncTableStatusWithReservations(); // Đồng bộ trạng thái bàn ngay sau khi load đặt bàn
@@ -190,6 +210,8 @@ class _DatBanScreenState extends State<DatBanScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) {
+          int soKhach = int.tryParse(_soKhachController.text) ?? 0;
+          bool showTienCoc = _selectedBanIds.length > 3 || soKhach > 10;
           return AlertDialog(
             title: const Text('Thông tin đặt bàn'),
             content: SingleChildScrollView(
@@ -234,9 +256,12 @@ class _DatBanScreenState extends State<DatBanScreen> {
                       decoration: const InputDecoration(labelText: 'Số khách'),
                       keyboardType: TextInputType.number,
                       validator: (value) {
-                        if (value!.isEmpty) return 'Vui lòng nhập số khách';
+                        if (value == null || value.isEmpty) return 'Vui lòng nhập số khách';
                         if (int.tryParse(value) == null) return 'Vui lòng nhập số hợp lệ';
                         return null;
+                      },
+                      onChanged: (value) {
+                        setState(() {}); // Để cập nhật showTienCoc khi số khách thay đổi
                       },
                     ),
                     Row(
@@ -343,6 +368,22 @@ class _DatBanScreenState extends State<DatBanScreen> {
                               child: Text('Không có bàn khả dụng', style: TextStyle(color: Colors.red)),
                             ),
                     const SizedBox(height: 12),
+                    // Số tiền cọc
+                    if (showTienCoc)
+                      TextFormField(
+                        controller: _soTienCocController,
+                        decoration: const InputDecoration(labelText: 'Số tiền cọc (VNĐ)'),
+                        keyboardType: TextInputType.number,
+                        validator: (value) {
+                          if (showTienCoc && (value == null || value.isEmpty)) {
+                            return 'Vui lòng nhập số tiền cọc';
+                          }
+                          if (value != null && value.isNotEmpty && double.tryParse(value) == null) {
+                            return 'Nhập số hợp lệ';
+                          }
+                          return null;
+                        },
+                      ),
                   ],
                 ),
               ),
@@ -377,52 +418,131 @@ class _DatBanScreenState extends State<DatBanScreen> {
   }
 
   Future<void> _confirmReservation() async {
-    if (_formKey.currentState!.validate() && _selectedKhuVuc != null) {
+    if (_formKey.currentState!.validate() && _selectedKhuVuc != null && _selectedBanIds.isNotEmpty) {
       try {
-        // Gửi danh sách bàn đã chọn vào service
-        final datBans = await _datBanService.createDatBan(
-          khachHangId: null,
-          banIds: _selectedBanIds,
-          soKhach: int.parse(_soKhachController.text),
-          thoiGianDat: _thoiGianDat ?? DateTime.now(),
-          ghiChu: _ghiChuController.text.isNotEmpty ? _ghiChuController.text : null,
-          hoTen: _hoTenController.text.trim(),
-          soDienThoai: _soDienThoaiController.text.trim(),
-        );
-        // Group các DatBan vừa đặt thành 1 DatBanGroup cho UI
-        final tenBans = datBans.map((d) {
-          final ban = _banList.firstWhere(
-            (b) => b.banId == d.banId,
-            orElse: () => BanNhaHang(
-              banId: d.banId ?? 0,
-              tenBan: 'B${d.banId ?? ""}',
-              khuvucId: 0,
-              trangThai: '',
-              qrCodeUrl: null,
-            ),
+        double soTienCoc = double.tryParse(_soTienCocController.text) ?? 0.0;
+        
+        // Hiển thị loading
+        if (context.mounted) {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (BuildContext context) {
+              return const Center(
+                child: CircularProgressIndicator(),
+              );
+            },
           );
-          return ban.tenBan;
-        }).toList();
-        final datBanGroup = DatBanGroup.fromDatBanList(
-          datBans,
-          _hoTenController.text,
-          tenBans,
-          soDienThoai: _soDienThoaiController.text,
-        );
-        setState(() {
-          _datBanList.addAll(datBans);
-          _datBanGroupList.add(datBanGroup);
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Đặt bàn thành công!')),
-        );
-        // Reload lại danh sách bàn và đặt bàn sau khi đặt thành công
-        await _reloadBanAndDatBan();
-        // KHÔNG pop màn hình, chỉ cập nhật danh sách bàn và hiển thị thông báo thành công
-        // Khi nhấn back mới quay về khu vực
+        }
+
+        try {
+          final datBans = await _datBanService.createDatBan(
+            khachHangId: null,
+            banIds: _selectedBanIds,
+            soKhach: int.parse(_soKhachController.text),
+            thoiGianDat: _thoiGianDat ?? DateTime.now(),
+            ghiChu: _ghiChuController.text.isEmpty ? null : _ghiChuController.text,
+            hoTen: _hoTenController.text.trim(),
+            soDienThoai: _soDienThoaiController.text.trim(),
+            soTienCoc: soTienCoc,
+          );
+
+          // Log thông tin đặt bàn và phiên sử dụng bàn
+          for (final db in datBans) {
+            print('[DEBUG][DatBan] datban_id: \\${db.datbanId}, phien_id: \\${db.phienId}, ban_id: \\${db.banId}, ban_ids: \\${db.banIds}');
+          }
+
+          // Đóng loading
+          if (context.mounted) {
+            Navigator.of(context).pop();
+          }
+
+          if (datBans.isEmpty) {
+            throw Exception('Không nhận được phản hồi từ máy chủ');
+          }
+
+          // Cập nhật UI
+          if (context.mounted) {
+            setState(() {
+              _datBanList.addAll(datBans);
+              // Tạo DatBanGroup mới để hiển thị
+              final now = DateTime.now();
+              final datBanGroup = DatBanGroup(
+                datbanId: datBans.first.datbanId,
+                tenKhachHang: _hoTenController.text.trim(),
+                soDienThoai: _soDienThoaiController.text.trim(),
+                soKhach: int.parse(_soKhachController.text),
+                thoiGianDat: _thoiGianDat ?? now,
+                trangThai: 'ChoXuLy',
+                banIds: _selectedBanIds,
+                tenBans: datBans.map((db) => 'B${db.banId}').toList(),
+                ghiChu: _ghiChuController.text,
+                ngayTao: now,
+                phienId: datBans.first.phienId, // Đảm bảo luôn truyền phienId
+              );
+              _datBanGroupList.insert(0, datBanGroup);
+            });
+          }
+
+          // Đồng bộ lại trạng thái bàn
+          await _reloadBanAndDatBan();
+          
+          // Hiển thị thông báo
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('✅ Đặt bàn thành công!')),
+            );
+          }
+
+          // Reset form
+          _hoTenController.clear();
+          _soDienThoaiController.clear();
+          _emailController.clear();
+          _soKhachController.clear();
+          _ghiChuController.clear();
+          _soTienCocController.text = '0';
+          _selectedBanIds = [];
+          _thoiGianDat = DateTime.now();
+
+          // Không đóng dialog đặt bàn ngay mà chỉ reset form
+          // để người dùng có thể xem lại thông tin đã đặt
+          setState(() {
+            // Reset các trường nhập liệu
+            _hoTenController.clear();
+            _soDienThoaiController.clear();
+            _emailController.clear();
+            _soKhachController.clear();
+            _ghiChuController.clear();
+            _soTienCocController.text = '0';
+            _selectedBanIds = [];
+            _thoiGianDat = DateTime.now();
+          });
+          
+          // Tự động đóng dialog sau 3 giây
+          Future.delayed(const Duration(seconds: 60), () {
+            if (context.mounted) {
+              Navigator.of(context).pop();
+            }
+          });
+
+        } catch (e) {
+          // Đóng loading nếu có lỗi
+          if (context.mounted) {
+            Navigator.of(context).pop();
+          }
+          rethrow;
+        }
       } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('❌ Lỗi khi đặt bàn: ${e.toString()}')),
+          );
+        }
+      }
+    } else if (_selectedBanIds.isEmpty) {
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi: $e')),
+          const SnackBar(content: Text('❌ Vui lòng chọn ít nhất một bàn!')),
         );
       }
     }
@@ -530,6 +650,36 @@ class _DatBanScreenState extends State<DatBanScreen> {
     );
   }
 
+  // Hàm mở link thanh toán VNPay
+  Future<void> _thanhToanDatCocVNPay(int datBanId, int phienId) async {
+    final paymentUrl = await _datBanService.taoLinkThanhToanVNPay(datBanId,phienId);
+    if (paymentUrl != null && paymentUrl.isNotEmpty) {
+      if (await canLaunchUrl(Uri.parse(paymentUrl))) {
+        await launchUrl(Uri.parse(paymentUrl), mode: LaunchMode.externalApplication);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Không thể mở trang thanh toán VNPay!')),
+        );
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Không lấy được link thanh toán!')),
+      );
+    }
+  }
+
+  // Hàm đặt cọc nhanh (gọi API đặt cọc và mở thanh toán VNPay)
+  Future<void> _datCocVaThanhToanVNPay(int datBanId, double soTienCoc, int phienId) async {
+    final success = await _datBanService.datCoc(datBanId, soTienCoc);
+    if (success) {
+      await _thanhToanDatCocVNPay(datBanId,phienId);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đặt cọc thất bại!')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -613,9 +763,10 @@ class _DatBanScreenState extends State<DatBanScreen> {
                       List<DatBanGroup> filtered = _datBanGroupList.where((g) {
                         if (_filterStatus == "approved") {
                           return g.trangThai != "DaHuy";
-                        } else {
+                        } else if (_filterStatus == "cancelled") {
                           return g.trangThai == "DaHuy";
                         }
+                        return true;
                       }).where((g) {
                         if (_searchText.isEmpty) return true;
                         final ten = g.tenKhachHang.toLowerCase();
@@ -698,6 +849,33 @@ class _DatBanScreenState extends State<DatBanScreen> {
                                       ),
                                     ],
                                   ),
+                                  Column(
+  crossAxisAlignment: CrossAxisAlignment.start,
+  children: [
+    const Text('Tiền cọc'),
+    if (_datBanList.isNotEmpty)
+      Text(
+        (() {
+          final datBan = _datBanList.firstWhere(
+            (d) => d.datbanId == group.datbanId,
+            orElse: () => DatBan(
+              datbanId: group.datbanId,
+              soKhach: group.soKhach,
+              thoiGianDat: group.thoiGianDat,
+              trangThai: group.trangThai,
+              ngayTao: group.ngayTao,
+              banTenList: group.tenBans,
+              banIds: group.banIds,
+            ),
+          );
+          return datBan.soTienCoc > 0 ? '${datBan.soTienCoc.toStringAsFixed(0)} VNĐ' : 'Không';
+        })(),
+        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green),
+      )
+    else
+      const Text('Không'),
+  ],
+),
                                   Row(
                                     children: [
                                       // Nút nhập/sửa thông tin khách hàng
@@ -713,6 +891,67 @@ class _DatBanScreenState extends State<DatBanScreen> {
                                       IconButton(
                                         icon: const Icon(Icons.close, color: Colors.red),
                                         onPressed: () => _deleteReservation(group.datbanId),
+                                      ),
+                                      // Nút đặt cọc & thanh toán VNPay
+                                      IconButton(
+                                        icon: const Icon(Icons.payment, color: Colors.green),
+                                        tooltip: 'Đặt cọc & Thanh toán VNPay',
+                                        onPressed: () async {
+                                          final datBan = _datBanList.firstWhere(
+                                            (d) => d.datbanId == group.datbanId,
+                                            orElse: () => DatBan(
+                                              datbanId: group.datbanId,
+                                              soKhach: group.soKhach,
+                                              thoiGianDat: group.thoiGianDat,
+                                              trangThai: group.trangThai,
+                                              ngayTao: group.ngayTao,
+                                              banTenList: group.tenBans,
+                                              banIds: group.banIds,
+                                              phienId: group.phienId, // Đảm bảo truyền phienId từ group
+                                            ),
+                                          );
+                                          final soTienCoc = datBan.soTienCoc;
+                                          final phienId = datBan.phienId;
+                                          if (soTienCoc > 0 && phienId != null) {
+                                            await _datCocVaThanhToanVNPay(datBan.datbanId, soTienCoc, phienId);
+                                          } else if (soTienCoc <= 0) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(content: Text('Đặt bàn này chưa có số tiền cọc!')),
+                                            );
+                                          } else {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(content: Text('Không tìm thấy mã phiên sử dụng bàn!')),
+                                            );
+                                          }
+                                        },
+                                      ),
+                                      // Nút đặt cọc (gọi datCocHandler)
+                                      IconButton(
+                                        icon: const Icon(Icons.attach_money, color: Colors.blue),
+                                        tooltip: 'Đặt cọc',
+                                        onPressed: () async {
+                                          final datBan = _datBanList.firstWhere(
+                                            (d) => d.datbanId == group.datbanId,
+                                            orElse: () => DatBan(
+                                              datbanId: group.datbanId,
+                                              soKhach: group.soKhach,
+                                              thoiGianDat: group.thoiGianDat,
+                                              trangThai: group.trangThai,
+                                              ngayTao: group.ngayTao,
+                                              banTenList: group.tenBans,
+                                              banIds: group.banIds,
+                                              phienId: group.phienId, // Đảm bảo truyền phienId từ group
+                                            ),
+                                          );
+                                          final soTienCoc = datBan.soTienCoc;
+                                          if (soTienCoc > 0) {
+                                            await _datBanService.datCocHandler(context, datBan.datbanId, soTienCoc, _reloadBanAndDatBan);
+                                          } else {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(content: Text('Đặt bàn này chưa có số tiền cọc!')),
+                                            );
+                                          }
+                                        },
                                       ),
                                     ],
                                   ),

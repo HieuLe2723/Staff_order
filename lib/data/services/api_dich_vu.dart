@@ -14,9 +14,17 @@ class ApiDichVu {
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      // Kiểm tra nếu có khóa 'data' trong phản hồi
-      final userData = data['data'] ?? data; // Lấy 'data' nếu có, ngược lại lấy trực tiếp
-      return NhanVienDoiTuong.fromJson(userData);
+      // Nếu có trường 'data' thì parse user, nếu có 'message' thì báo lỗi
+      if (data.containsKey('data')) {
+        final userData = data['data'];
+        return NhanVienDoiTuong.fromJson(userData);
+      } else if (data.containsKey('message')) {
+        print('Đăng nhập thất bại: ${data['message']}');
+        return null;
+      } else {
+        print('Phản hồi không hợp lệ từ server: ${response.body}');
+        return null;
+      }
     } else {
       print('Server responded with status code: ${response.statusCode}');
       print('Response body: ${response.body}');

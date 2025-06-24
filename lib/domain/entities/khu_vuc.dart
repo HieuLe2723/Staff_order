@@ -17,7 +17,7 @@ class KhuVuc {
     return KhuVuc(
       khuvucId: json['khuvuc_id'],
       tenKhuvuc: json['ten_khuvuc'],
-      soBan: json['so_ban'] ?? 0,
+      soBan: (json['so_ban'] as int?) ?? (json['ban_list'] as List<dynamic>? ?? []).length,
       banList: (json['ban_list'] as List<dynamic>? ?? [])
           .map((e) => BanNhaHang.fromJson(e))
           .toList(),

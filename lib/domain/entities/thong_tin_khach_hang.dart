@@ -8,6 +8,11 @@ class ThongTinKhachHang {
   final String? loaiNhom;
   final DateTime ngayTao;
   final DateTime? ngayCapNhat;
+  final int? soKhachNguoiLon;
+  final int? soKhachTreEmCoPhi;
+  final int? soKhachTreEmKhongPhi;
+  final String? loaiKhach;
+  final String? loaiMenu;
 
   ThongTinKhachHang({
     required this.khachhangId,
@@ -19,6 +24,11 @@ class ThongTinKhachHang {
     this.loaiNhom,
     required this.ngayTao,
     this.ngayCapNhat,
+    this.soKhachNguoiLon,
+    this.soKhachTreEmCoPhi,
+    this.soKhachTreEmKhongPhi,
+    this.loaiKhach,
+    this.loaiMenu,
   });
 
   factory ThongTinKhachHang.fromJson(Map<String, dynamic> json) {
@@ -32,6 +42,11 @@ class ThongTinKhachHang {
       loaiNhom: json['loai_nhom'],
       ngayTao: DateTime.parse(json['ngay_tao']),
       ngayCapNhat: json['ngay_cap_nhat'] != null ? DateTime.parse(json['ngay_cap_nhat']) : null,
+      soKhachNguoiLon: json['so_khach_nguoi_lon'],
+      soKhachTreEmCoPhi: json['so_khach_tre_em_co_phi'],
+      soKhachTreEmKhongPhi: json['so_khach_tre_em_mien_phi'],
+      loaiKhach: json['loai_khach'],
+      loaiMenu: json['loai_menu'],
     );
   }
 
@@ -46,6 +61,11 @@ class ThongTinKhachHang {
       'loai_nhom': loaiNhom,
       'ngay_tao': ngayTao.toIso8601String(),
       'ngay_cap_nhat': ngayCapNhat?.toIso8601String(),
+      'so_khach_nguoi_lon': soKhachNguoiLon,
+      'so_khach_tre_em_co_phi': soKhachTreEmCoPhi,
+      'so_khach_tre_em_mien_phi': soKhachTreEmKhongPhi,
+      'loai_khach': loaiKhach,
+      'loai_menu': loaiMenu,
     };
   }
 }

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/material.dart';
 import '../../domain/entities/dat_ban.dart';
 import 'api_dich_vu.dart';
 
@@ -64,7 +65,6 @@ class DatBanService {
     }
   }
 
-  final ApiDichVu _apiService = ApiDichVu();
 
   // Fetch all reservations (optionally filter by area/date)
   Future<List<DatBan>> getAllDatBan({int? khuVucId, DateTime? date, String? trangThai}) async {
@@ -115,6 +115,7 @@ class DatBanService {
     String? ghiChu,
     String? hoTen,
     String? soDienThoai,
+    double soTienCoc = 0.0, // Thêm tham số số tiền cọc
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -129,6 +130,7 @@ class DatBanService {
         'so_khach': soKhach,
         'thoi_gian_dat': thoiGianDat.toIso8601String(),
         'trang_thai': 'ChoXuLy',
+        'so_tien_coc': soTienCoc, // Thêm vào payload
       };
       if (banIds.length > 1) {
         payload['ban_ids'] = banIds;
@@ -156,27 +158,40 @@ class DatBanService {
         body: jsonEncode(payload),
       );
 
+      print('[DEBUG][Response] body: \\${response.body}'); // Log toàn bộ response trả về
+
       if (response.statusCode == 201) {
         final data = jsonDecode(response.body);
         final dynamic raw = data['data'];
-        // Always treat as a list for consistency
-        if (raw is List) {
+        // Nếu backend trả về object duy nhất (multi-table booking)
+        if (raw is Map<String, dynamic>) {
+          final phienId = raw['phien_id'];
+          final banIds = (raw['ban_ids'] as List?)?.where((e) => e != null).map((e) => e as int).toList() ?? [];
+          // Nếu có nhiều bàn, tạo nhiều object DatBan, mỗi object cho 1 bàn, luôn giữ phien_id
+          if (banIds.length > 1) {
+            return banIds.map((banId) {
+              final map = {...raw, 'ban_id': banId, 'ban_ids': [banId], 'phien_id': phienId};
+              print('[DEBUG][DatBanService] map truyền vào DatBan.fromJson: ' + map.toString()); // Log để kiểm tra phien_id
+              return DatBan.fromJson(map);
+            }).toList();
+          } else {
+            // Trường hợp 1 bàn hoặc không có ban_ids
+            print('[DEBUG][DatBanService] raw truyền vào DatBan.fromJson: ' + raw.toString()); // Log để kiểm tra phien_id
+            return [DatBan.fromJson(raw)];
+          }
+        } else if (raw is List) {
+          // Trường hợp cũ, backend trả về list các đặt bàn (single-table booking)
           return raw
               .where((e) => e != null)
               .map((e) => DatBan.fromJson(e as Map<String, dynamic>))
               .toList();
-        } else if (raw is Map<String, dynamic>) {
-          return [DatBan.fromJson(raw)];
         } else if (raw != null) {
-          // Defensive: try to parse as Map if possible
           try {
             return [DatBan.fromJson(Map<String, dynamic>.from(raw))];
           } catch (_) {
-            // Malformed backend data
             throw Exception('Dữ liệu trả về từ máy chủ không hợp lệ.');
           }
         } else {
-          // Backend returned no data
           throw Exception('Không nhận được dữ liệu đặt bàn từ máy chủ.');
         }
       } else if (response.statusCode == 401) {
@@ -214,5 +229,127 @@ class DatBanService {
       print('Lỗi khi gán khách hàng cho đặt bàn: $e');
       throw Exception('Lỗi khi gán khách hàng cho đặt bàn: $e');
     }
+  }
+
+  /// Đặt cọc cho đặt bàn (theo backend: POST /api/dat-ban/dat-coc, truyền datban_id trong body)
+  Future<bool> datCoc(int datBanId, double soTienCoc) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwt_token');
+      if (token == null) {
+        throw Exception('Không tìm thấy token. Vui lòng đăng nhập lại.');
+      }
+      final response = await http.post(
+        Uri.parse('${ApiDichVu.baseUrl}/api/dat-ban/dat-coc'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'datban_id': datBanId,
+          'so_tien_coc': soTienCoc,
+        }),
+      );
+      if (response.statusCode == 200) {
+        return true;
+      } else {
+        throw Exception('Không thể đặt cọc: ${response.body}');
+      }
+    } catch (e) {
+      print('Lỗi khi đặt cọc: $e');
+      return false;
+    }
+  }
+
+  /// Tạo link thanh toán VNPay cho đặt cọc (theo backend: POST /api/vnpay/create-payment-url, truyền datban_id trong body)
+  Future<String?> taoLinkThanhToanVNPay(int datBanId, int phienId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwt_token');
+      if (token == null) {
+        throw Exception('Không tìm thấy token. Vui lòng đăng nhập lại.');
+      }
+      final response = await http.post(
+        Uri.parse('${ApiDichVu.baseUrl}/api/vnpay/create-payment-url'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'datban_id': datBanId, 'phien_id': phienId}),
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['paymentUrl'] as String?;
+      } else {
+        throw Exception('Không thể tạo link thanh toán: ${response.body}');
+      }
+    } catch (e) {
+      print('Lỗi khi tạo link thanh toán VNPay: $e');
+      return null;
+    }
+  }
+
+  /// Kiểm tra trạng thái đặt bàn (để cập nhật giao diện nếu hết hiệu lực giữ bàn)
+  Future<String?> kiemTraTrangThaiBan(int datBanId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('jwt_token');
+      if (token == null) {
+        throw Exception('Không tìm thấy token. Vui lòng đăng nhập lại.');
+      }
+      final response = await http.get(
+        Uri.parse('${ApiDichVu.baseUrl}/api/dat-ban/$datBanId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['data']?['trang_thai'] as String?;
+      } else {
+        throw Exception('Không thể kiểm tra trạng thái bàn: ${response.body}');
+      }
+    } catch (e) {
+      print('Lỗi khi kiểm tra trạng thái bàn: $e');
+      return null;
+    }
+  }
+
+  // Hàm xử lý đặt cọc, hiển thị thông báo và cập nhật giao diện
+  Future<void> datCocHandler(BuildContext context, int datBanId, double soTienCoc, Future<void> Function() reloadBanAndDatBan) async {
+    try {
+      final success = await datCoc(datBanId, soTienCoc);
+      if (success) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('✅ Đặt cọc thành công!')),
+          );
+          await reloadBanAndDatBan(); // Cập nhật lại giao diện
+        }
+      } else {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('❌ Đặt cọc thất bại!')),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('❌ Lỗi khi đặt cọc:${e.toString()}')),
+        );
+      }
+    }
+  }
+
+  Future<void> capNhatTrangThai(int banId, String trangThai) async {
+    // Implement the method logic here
+    print('Updating status for banId: $banId to $trangThai');
+  }
+
+  Future<void> capNhatTrangThaiBan(int banId, String trangThai) async {
+    // Implement the method logic here
+    print('Updating table status for banId: $banId to $trangThai');
   }
 }

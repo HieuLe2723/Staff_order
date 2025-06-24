@@ -11,7 +11,11 @@ class DangNhap {
     if (nhanVien != null) {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('jwt_token', nhanVien.token);
+      await prefs.setString('nhanvien_id', nhanVien.nhanvienId);
+      await prefs.setString('ho_ten', nhanVien.hoTen);
       print('Token saved: ${nhanVien.token}');
+      print('NhanVienId saved: ${nhanVien.nhanvienId}');
+      print('HoTen saved: ${nhanVien.hoTen}');
     } else {
       print('Authentication failed');
     }

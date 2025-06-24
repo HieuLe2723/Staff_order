@@ -8,7 +8,6 @@ import '../../domain/entities/phan_ca_nhan_vien.dart';
 import 'api_dich_vu.dart';
 
 class CaLamViecService {
-  final ApiDichVu _apiService = ApiDichVu();
 
   Future<List<CaLamViec>> getAllShifts() async {
     try {

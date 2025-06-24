@@ -6,16 +6,9 @@ class XacThucTrinhTu {
 
   XacThucTrinhTu(this._dangNhap);
 
-  Future<NhanVienDoiTuong?> call(String credentials) async {
-    final parts = credentials.split('|');
-    if (parts.length != 2) {
-      print('Invalid credentials format: $credentials');
-      return null;
-    }
-    final maNhanVien = parts[0];
-    final matkhauHash = parts[1];
+  Future<NhanVienDoiTuong?> call(String maNhanVien, String matkhauHash) async {
     if (maNhanVien.isEmpty || matkhauHash.isEmpty) {
-      print('Empty maNhanVien or matkhauHash: $maNhanVien | $matkhauHash');
+      print('Empty maNhanVien or matkhauHash');
       return null;
     }
     return await _dangNhap.xacThuc(maNhanVien, matkhauHash);

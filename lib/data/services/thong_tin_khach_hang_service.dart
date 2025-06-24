@@ -5,7 +5,6 @@ import '../../domain/entities/thong_tin_khach_hang.dart';
 import 'api_dich_vu.dart';
 
 class ThongTinKhachHangService {
-  final ApiDichVu _apiService = ApiDichVu();
 
   // Create a new customer
   Future<ThongTinKhachHang?> createThongTinKhachHang({

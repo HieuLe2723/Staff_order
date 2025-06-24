@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../data/services/dang_nhap.dart';
 import '../../data/services/xac_thuc_trinh_tu.dart';
-import '../widgets/ban_phim_so_dinh_dang.dart';
 import 'man_hinh_khu_vuc.dart';
 
 class ManHinhDangNhap extends StatefulWidget {
@@ -61,16 +60,19 @@ class _ManHinhDangNhapState extends State<ManHinhDangNhap> {
 
   Future<void> _dangNhap() async {
     try {
-      final nhanVien = await _xacThucTrinhTu('$nhanvienId|$matkhauHash');
+      final nhanVien = await _xacThucTrinhTu(nhanvienId, matkhauHash);
       if (nhanVien != null) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đăng nhập thành công!')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Đăng nhập thành công! Chào ${nhanVien.hoTen}')));
         _chuyenHuongSangKhuVuc();
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đăng nhập thất bại: Sai mã nhân viên hoặc mật khẩu')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Đăng nhập thất bại: Sai mã nhân viên hoặc mật khẩu')));
       }
     } catch (e) {
       print('Login error: $e');
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: ${e.toString()}')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Lỗi: ${e.toString()}')));
     }
   }
 

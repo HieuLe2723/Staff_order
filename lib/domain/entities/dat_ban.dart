@@ -12,7 +12,9 @@ class DatBan {
   final String? ghiChu;
   final String trangThai;
   final DateTime ngayTao;
-  
+  final double soTienCoc;
+  final DateTime? thoiGianDatCoc; // Thời gian đặt cọc
+  final int? phienId; // Mã phiên sử dụng bàn
 
 
   DatBan({
@@ -28,10 +30,14 @@ class DatBan {
     required this.ngayTao,
     this.hoTen,
     this.soDienThoai,
+    this.soTienCoc = 0.0,
+    this.thoiGianDatCoc,
+    this.phienId,
   });
 
   factory DatBan.fromJson(Map<String, dynamic> json) {
     // Defensive parsing: always provide safe defaults for all fields
+    print('[DEBUG][DatBan.fromJson] JSON: ' + json.toString()); // Thêm log để kiểm tra dữ liệu trả về
     return DatBan(
       banTenList: (json['ban_ten_list'] is List)
           ? (json['ban_ten_list'] as List).where((e) => e != null).map((e) => e.toString()).toList()
@@ -54,6 +60,11 @@ class DatBan {
           : DateTime.now(),
       hoTen: json['ho_ten'],
       soDienThoai: json['so_dien_thoai'],
+      soTienCoc: (json['so_tien_coc'] != null) ? double.tryParse(json['so_tien_coc'].toString()) ?? 0.0 : 0.0,
+      thoiGianDatCoc: (json['thoi_gian_dat_coc'] != null && json['thoi_gian_dat_coc'].toString().isNotEmpty)
+          ? DateTime.tryParse(json['thoi_gian_dat_coc'].toString())
+          : null,
+      phienId: json['phien_id'],
     );
   }
 
@@ -69,6 +80,28 @@ class DatBan {
       'ngay_tao': ngayTao.toIso8601String(),
       'ho_ten': hoTen,
       'so_dien_thoai': soDienThoai,
+      'so_tien_coc': soTienCoc,
+      'phien_id': phienId, // Thêm dòng này để trả về phien_id
     };
+  }
+
+  DatBan copyWith({int? phienId}) {
+    return DatBan(
+      hoTen: hoTen,
+      soDienThoai: soDienThoai,
+      banTenList: banTenList,
+      datbanId: datbanId,
+      khachhangId: khachhangId,
+      banId: banId,
+      banIds: banIds,
+      soKhach: soKhach,
+      thoiGianDat: thoiGianDat,
+      ghiChu: ghiChu,
+      trangThai: trangThai,
+      ngayTao: ngayTao,
+      soTienCoc: soTienCoc,
+      thoiGianDatCoc: thoiGianDatCoc,
+      phienId: phienId ?? this.phienId,
+    );
   }
 }
