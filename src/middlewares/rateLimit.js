@@ -1,4 +1,3 @@
-const rateLimit = require('express-rate-limit');
 const winston = require('winston');
 const ResponseUtils = require('../utils/response');
 require('dotenv').config();
@@ -15,17 +14,7 @@ const logger = winston.createLogger({
   ],
 });
 
-const rateLimitMiddleware = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || 15 * 60 * 1000), 
-  max: parseInt(process.env.RATE_LIMIT_MAX || 100),
-  standardHeaders: true, 
-  legacyHeaders: false, 
-  handler: (req, res, next) => {
-    logger.warn('Rate limit exceeded', { ip: req.ip, url: req.url });
-    return res.status(429).json(
-      ResponseUtils.error('Too many requests, please try again later', 429)
-    );
-  },
-});
+// Đã vô hiệu hóa rateLimit, luôn cho phép request
+const rateLimitMiddleware = (req, res, next) => next();
 
 module.exports = rateLimitMiddleware;

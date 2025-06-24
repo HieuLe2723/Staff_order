@@ -1,65 +1,125 @@
-const KhuyenMaiModel = require('../models/khuyenMai.model');
+const MonAnModel = require('../models/monAn.model');
 
-class KhuyenMaiService {
-  static async createKhuyenMai({ ma_code, mo_ta, phan_tram_giam, ngay_het_han }) {
-    if (!ma_code || typeof ma_code !== 'string' || ma_code.length > 50) {
-      throw new Error('ma_code is required and must be a string with max length 50');
+class MonAnService {
+  static async getMonAnByLoaiId(loai_id) {
+    if (!Number.isInteger(Number(loai_id)) || loai_id <= 0) {
+      throw new Error('ID loại món ăn không hợp lệ');
     }
-    if (mo_ta && (typeof mo_ta !== 'string' || mo_ta.length > 255)) {
-      throw new Error('mo_ta must be a string with max length 255');
+    return await MonAnModel.findByLoaiId(loai_id);
+  }
+  static async createMonAn({ ten_mon, loai_id, gia, hinh_anh = 'default_dish.jpg' }) {
+    // Input validation - these should match the Joi schema but provide extra safety
+    if (!ten_mon || typeof ten_mon !== 'string' || ten_mon.trim() === '') {
+      throw new Error('Tên món ăn là bắt buộc');
     }
-    if (!Number.isInteger(phan_tram_giam) || phan_tram_giam < 0 || phan_tram_giam > 100) {
-      throw new Error('phan_tram_giam must be an integer between 0 and 100');
+    if (ten_mon.length > 100) {
+      throw new Error('Tên món ăn không được vượt quá 100 ký tự');
     }
-    if (!ngay_het_han || isNaN(Date.parse(ngay_het_han))) {
-      throw new Error('ngay_het_han must be a valid date');
+    if (!Number.isInteger(Number(loai_id)) || loai_id <= 0) {
+      throw new Error('ID loại món ăn không hợp lệ');
     }
-    return await KhuyenMaiModel.create({ ma_code, mo_ta, phan_tram_giam, ngay_het_han });
+    if (isNaN(Number(gia)) || Number(gia) <= 0) {
+      throw new Error('Giá tiền phải là số dương');
+    }
+    
+    // Handle optional image
+    const imagePath = hinh_anh && typeof hinh_anh === 'string' && hinh_anh.trim() !== '' 
+      ? hinh_anh.trim() 
+      : 'default_dish.jpg';
+      
+    if (imagePath.length > 255) {
+      throw new Error('Đường dẫn hình ảnh không được vượt quá 255 ký tự');
+    }
+
+    try {
+      return await MonAnModel.create({ 
+        ten_mon: ten_mon.trim(), 
+        loai_id: Number(loai_id), 
+        gia: Number(gia), 
+        hinh_anh: hinh_anh.trim() 
+      });
+    } catch (error) {
+      throw new Error(`Lỗi khi tạo món ăn: ${error.message}`);
+    }
   }
 
-  static async getKhuyenMaiByCode(ma_code) {
-    if (!ma_code || typeof ma_code !== 'string') {
-      throw new Error('ma_code must be a string');
+  static async getMonAnById(monan_id) {
+    if (!Number.isInteger(Number(monan_id)) || monan_id <= 0) {
+      throw new Error('ID món ăn không hợp lệ');
     }
-    const khuyenMai = await KhuyenMaiModel.findByCode(ma_code);
-    if (!khuyenMai) {
-      throw new Error('Promotion not found or expired');
+
+    try {
+      const monAn = await MonAnModel.findById(monan_id);
+      if (!monAn) {
+        throw new Error('Không tìm thấy món ăn');
+      }
+      return monAn;
+    } catch (error) {
+      throw new Error(`Lỗi khi lấy thông tin món ăn: ${error.message}`);
     }
-    return khuyenMai;
   }
 
-  static async getAllKhuyenMai({ activeOnly = false } = {}) {
-    if (typeof activeOnly !== 'boolean') {
-      throw new Error('activeOnly must be a boolean');
+  static async updateMonAn(monan_id, { ten_mon, loai_id, gia, hinh_anh, khoa }) {
+    if (!Number.isInteger(Number(monan_id)) || monan_id <= 0) {
+      throw new Error('ID món ăn không hợp lệ');
     }
-    return await KhuyenMaiModel.findAll({ activeOnly });
+
+    const updates = {};
+    if (ten_mon !== undefined) {
+      if (typeof ten_mon !== 'string' || ten_mon.trim() === '') {
+        throw new Error('Tên món ăn không hợp lệ');
+      }
+      updates.ten_mon = ten_mon.trim();
+    }
+    
+    if (loai_id !== undefined) {
+      if (!Number.isInteger(Number(loai_id)) || loai_id <= 0) {
+        throw new Error('ID loại món ăn không hợp lệ');
+      }
+      updates.loai_id = Number(loai_id);
+    }
+    
+    if (gia !== undefined) {
+      if (isNaN(Number(gia)) || Number(gia) < 0) {
+        throw new Error('Giá tiền không hợp lệ');
+      }
+      updates.gia = Number(gia);
+    }
+    
+    if (hinh_anh !== undefined) {
+      if (typeof hinh_anh !== 'string' || hinh_anh.trim() === '') {
+        throw new Error('Đường dẫn hình ảnh không hợp lệ');
+      }
+      updates.hinh_anh = hinh_anh.trim();
+    }
+    
+    if (khoa !== undefined) {
+      updates.khoa = khoa ? 1 : 0;
+      if (khoa) {
+        updates.ngay_khoa = new Date();
+      } else {
+        updates.ngay_khoa = null;
+      }
+    }
+
+    try {
+      return await MonAnModel.update(monan_id, updates);
+    } catch (error) {
+      throw new Error(`Lỗi khi cập nhật món ăn: ${error.message}`);
+    }
   }
 
-  static async updateKhuyenMai(khuyenmai_id, { ma_code, mo_ta, phan_tram_giam, ngay_het_han }) {
-    if (!Number.isInteger(Number(khuyenmai_id))) {
-      throw new Error('khuyenmai_id must be an integer');
+  static async deleteMonAn(monan_id) {
+    if (!Number.isInteger(Number(monan_id)) || monan_id <= 0) {
+      throw new Error('ID món ăn không hợp lệ');
     }
-    if (!ma_code || typeof ma_code !== 'string' || ma_code.length > 50) {
-      throw new Error('ma_code is required and must be a string with max length 50');
-    }
-    if (mo_ta && (typeof mo_ta !== 'string' || mo_ta.length > 255)) {
-      throw new Error('mo_ta must be a string with max length 255');
-    }
-    if (!Number.isInteger(phan_tram_giam) || phan_tram_giam < 0 || phan_tram_giam > 100) {
-      throw new Error('phan_tram_giam must be an integer between 0 and 100');
-    }
-    if (!ngay_het_han || isNaN(Date.parse(ngay_het_han))) {
-      throw new Error('ngay_het_han must be a valid date');
-    }
-    return await KhuyenMaiModel.update(khuyenmai_id, { ma_code, mo_ta, phan_tram_giam, ngay_het_han });
-  }
 
-  static async deleteKhuyenMai(khuyenmai_id) {
-    if (!Number.isInteger(Number(khuyenmai_id))) {
-      throw new Error('khuyenmai_id must be an integer');
+    try {
+      return await MonAnModel.delete(monan_id);
+    } catch (error) {
+      throw new Error(`Lỗi khi xóa món ăn: ${error.message}`);
     }
-    return await KhuyenMaiModel.delete(khuyenmai_id);
   }
 }
 
-module.exports = KhuyenMaiService;
+module.exports = MonAnService;

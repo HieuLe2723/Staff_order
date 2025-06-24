@@ -30,6 +30,16 @@ class ChiTietDonHangController {
     }
   }
 
+  static async getChiTietDonHangBySessionId(req, res, next) {
+    try {
+      const { sessionId } = req.params;
+      const chiTiet = await ChiTietDonHangService.getChiTietDonHangBySessionId(sessionId);
+      return res.json(ResponseUtils.success(chiTiet));
+    } catch (err) {
+      next(err);
+    }
+  }
+
   static async updateChiTietDonHang(req, res, next) {
     try {
       const { id } = req.params;
@@ -49,13 +59,38 @@ class ChiTietDonHangController {
     }
   }
 
-  static async deleteChiTietDonHang(req, res, next) {
+
+
+  // Ra món hàng loạt
+  static async serveDishesBulk(req, res, next) {
     try {
-      const { id } = req.params;
-      const result = await ChiTietDonHangService.deleteChiTietDonHang(id);
-      return res.json(ResponseUtils.success(result, 'Xóa chi tiết đơn hàng thành công'));
+      const { item_ids } = req.body;
+      const result = await ChiTietDonHangService.serveDishesBulk(item_ids);
+      return res.json(ResponseUtils.success(result, 'Các món đã được cập nhật trạng thái phục vụ thành công'));
     } catch (err) {
       next(err);
+    }
+  }
+
+  // Ra món
+  static async serveDish(req, res, next) {
+    try {
+      const { id } = req.params;
+      const result = await ChiTietDonHangService.serveDish(id);
+      return res.json(ResponseUtils.success(result, 'Món đã được phục vụ thành công'));
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  // Cập nhật số lượng đã ra món
+  static async updateSoLuongDaRa(req, res, next) {
+    try {
+      const { items } = req.body; // items is an array of { chi_tiet_id, so_luong_ra }
+      const result = await ChiTietDonHangService.updateSoLuongDaRa(items);
+      return res.status(200).json(ResponseUtils.success(result, 'Successfully updated served quantities.'));
+    } catch (error) {
+      next(error);
     }
   }
 }

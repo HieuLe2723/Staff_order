@@ -3,17 +3,25 @@ const pool = require('../config/db.config');
 
 class ChiTietDonHangModel {
   static async create({ donhang_id, monan_id, so_luong, ghi_chu }) {
-    const validStatuses = ['ChoNau', 'DangNau', 'DaPhucVu'];
+    // Kiểm tra hợp lệ donhang_id và monan_id
     const [donHang] = await pool.query('SELECT 1 FROM DonHang WHERE donhang_id = ?', [donhang_id]);
     if (!donHang[0]) throw new Error('Không tìm thấy đơn hàng với donhang_id cung cấp');
     const [monAn] = await pool.query('SELECT 1 FROM MonAn WHERE monan_id = ?', [monan_id]);
     if (!monAn[0]) throw new Error('Không tìm thấy món ăn với monan_id cung cấp');
-
+    // Thêm mới chi tiết đơn hàng với trạng thái mặc định 'ChoNau'
     const [result] = await pool.query(
       'INSERT INTO ChiTietDonHang (donhang_id, monan_id, so_luong, ghi_chu, trang_thai_phuc_vu) VALUES (?, ?, ?, ?, ?)',
-      [donhang_id, monan_id, so_luong, ghi_chu, 'ChoNau']
+      [donhang_id, monan_id, so_luong, ghi_chu || null, 'ChoNau']
     );
-    return { chitiet_id: result.insertId, donhang_id, monan_id, so_luong, ghi_chu, trang_thai_phuc_vu: 'ChoNau', thoi_gian_phuc_vu: null };
+    return {
+      chitiet_id: result.insertId,
+      donhang_id,
+      monan_id,
+      so_luong,
+      ghi_chu,
+      trang_thai_phuc_vu: 'ChoNau',
+      thoi_gian_phuc_vu: null
+    };
   }
 
   static async findById(chitiet_id) {
@@ -27,10 +35,18 @@ class ChiTietDonHangModel {
     return rows[0];
   }
 
+  static async findByDonHangId(donhang_id) {
+    const [rows] = await pool.query(
+      'SELECT * FROM ChiTietDonHang WHERE donhang_id = ?',
+      [donhang_id]
+    );
+    return rows;
+  }
+
   static async update(chitiet_id, { donhang_id, monan_id, so_luong, ghi_chu, thoi_gian_phuc_vu, trang_thai_phuc_vu }) {
-    const validStatuses = ['ChoNau', 'DangNau', 'DaPhucVu'];
+    const validStatuses = ['ChoNau', 'DangNau', 'DaPhucVu', 'DaHuy'];
     if (trang_thai_phuc_vu && !validStatuses.includes(trang_thai_phuc_vu)) {
-      throw new Error('Giá trị trang_thai_phuc_vu không hợp lệ. Chỉ chấp nhận: ChoNau, DangNau, DaPhucVu');
+      throw new Error('Giá trị trang_thai_phuc_vu không hợp lệ. Chỉ chấp nhận: ChoNau, DangNau, DaPhucVu, DaHuy');
     }
     if (donhang_id) {
       const [donHang] = await pool.query('SELECT 1 FROM DonHang WHERE donhang_id = ?', [donhang_id]);

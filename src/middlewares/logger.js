@@ -25,6 +25,9 @@ const loggerMiddleware = (req, res, next) => {
     method,
     url,
     ip,
+    params: req.params,
+    query: req.query,
+    body: req.body,
     user: req.user ? { nhanvien_id: req.user.nhanvien_id, role: req.user.role_name } : 'Unauthenticated',
   });
 

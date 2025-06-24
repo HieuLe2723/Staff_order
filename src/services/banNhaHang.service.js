@@ -1,6 +1,7 @@
 // src/services/banNhaHang.service.js
 const BanNhaHangModel = require('../models/banNhaHang.model');
 const KhuVucModel = require('../models/khuVuc.model'); 
+const pool = require('../config/db.config'); // Assuming you have a db config file
 
 class BanNhaHangService {
   static async createBan({ ten_ban, khuvuc_id, trang_thai, qr_code_url }) {
@@ -59,6 +60,19 @@ class BanNhaHangService {
     }
 
     return await BanNhaHangModel.delete(ban_id);
+  }
+
+  // Lấy danh sách bàn kèm thông tin phiên
+  static async getActiveBans() {
+    const query = `
+      SELECT b.ban_id, b.ten_ban, b.trang_thai, p.phien_id, p.thoi_gian_bat_dau,
+        TIMESTAMPDIFF(MINUTE, p.thoi_gian_bat_dau, NOW()) AS so_phut_su_dung
+      FROM BanNhaHang b
+      LEFT JOIN PhienSuDungBan p ON b.ban_id = p.ban_id
+      WHERE b.trang_thai = 'DangSuDung'
+    `;
+    const [rows] = await pool.query(query);
+    return rows;
   }
 }
 

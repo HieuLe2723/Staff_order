@@ -16,6 +16,8 @@ const apiRoutes = require('./routes');
 const adminRoutes = require('./routes/adminRoutes');
 const log = require('./utils/logger');
 const nonceMiddleware = require('./middlewares/nonce');
+const http = require('http');
+const socketIo = require('socket.io');
 
 
 const app = express();
@@ -51,7 +53,10 @@ app.use(helmet({
   }
 }));
 app.use(compression());
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:3001',
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('combined'));
@@ -99,16 +104,26 @@ async function startServer() {
     console.log('Attempting to connect to database...');
     const connection = await pool.getConnection();
     console.log('✅ Database connected successfully');
-    connection.release();
+     const server = http.createServer(app);
 
-    // Test Redis connection if needed
-    // if (redisClient) {
-    //   await redisClient.ping();
-    //   console.log('✅ Redis connected successfully');
-    // }
+    // Khởi tạo socket.io
+    const io = socketIo(server, {
+      cors: {
+        origin: 'http://localhost:3001', 
+        credentials: true
+      }
+    });
 
-    // Start the server
-    const server = app.listen(PORT, () => {
+    io.on('connection', (socket) => {
+      console.log('A user connected:', socket.id);
+      // Bạn có thể xử lý các sự kiện ở đây
+      socket.on('disconnect', () => {
+        console.log('User disconnected:', socket.id);
+      });
+    });
+
+    // Start server (dùng server.listen thay vì app.listen)
+    server.listen(PORT, () => {
       console.log(`🚀 Server is running on http://localhost:${PORT}`);
       console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`🕒 Timezone: ${process.env.TIMEZONE || 'UTC'}`);
@@ -146,6 +161,14 @@ async function startServer() {
 
 // Start server
 startServer();
+
+// Tự động cập nhật trạng thái bàn quá hạn chưa có order mỗi 5 phút
+const { updateBanStatusIfNoOrder } = require('./services/autoUpdateBanStatus');
+setInterval(() => {
+  updateBanStatusIfNoOrder()
+    .then(() => console.log('[AutoUpdateBanStatus] Đã kiểm tra và cập nhật trạng thái các bàn quá hạn.'))
+    .catch(err => console.error('[AutoUpdateBanStatus] Lỗi:', err));
+}, 5 * 60 * 1000); // 5 phút
 
 // Process event handlers
 process.on('unhandledRejection', (error) => {

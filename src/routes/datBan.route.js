@@ -63,4 +63,18 @@ router.delete(
   DatBanController.deleteDatBan
 );
 
+router.post(
+  '/dat-coc',
+  authMiddleware,
+  roleMiddleware(['Khach Hang', 'Quan Ly', 'Nhan Vien']),
+  DatBanController.datCoc
+);
+
+router.post(
+  '/thanh-toan-dat-coc',
+  authMiddleware,
+  roleMiddleware(['Khach Hang', 'Quan Ly', 'Nhan Vien']),
+  DatBanController.thanhToanDatCoc
+);
+
 module.exports = router;

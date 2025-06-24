@@ -50,6 +50,11 @@ class ThongTinKhachHangModel {
     }
     return { khachhang_id };
   }
+
+  static async countAll() {
+    const [rows] = await pool.query('SELECT COUNT(*) as total FROM ThongTinKhachHang');
+    return { total: rows[0].total };
+  }
 }
 
 module.exports = ThongTinKhachHangModel;

@@ -41,6 +41,21 @@ class DanhGiaModel {
     }
     return { danhgia_id };
   }
+
+  static async countAll() {
+    const [rows] = await pool.query('SELECT COUNT(*) as total FROM DanhGia');
+    return rows[0].total;
+  }
+
+  static async getTotalPoints() {
+    const [rows] = await pool.query('SELECT SUM(diem_so) as total_points FROM DanhGia');
+    return rows[0].total_points;
+  }
+
+  static async countUniqueCustomers() {
+    const [rows] = await pool.query('SELECT COUNT(DISTINCT khachhang_id) as total_customers FROM DanhGia');
+    return rows[0].total_customers;
+  }
 }
 
 module.exports = DanhGiaModel;

@@ -10,11 +10,11 @@ const rateLimitMiddleware = require('../middlewares/rateLimit');
 router.use(loggerMiddleware);
 router.use(rateLimitMiddleware);
 router.use(authMiddleware);
-router.use(roleMiddleware(['Quan Ly']));
 
-router.post('/', validate(schemas.loaiMonAn), LoaiMonAnController.createLoaiMonAn);
-router.get('/', LoaiMonAnController.getAllLoaiMonAn);
-router.get('/:id', LoaiMonAnController.getLoaiMonAnById);
-router.delete('/:id', LoaiMonAnController.deleteLoaiMonAn);
+router.post('/', roleMiddleware(['Quan Ly']), validate(schemas.loaiMonAn), LoaiMonAnController.createLoaiMonAn);
+router.get('/', roleMiddleware(['Quan Ly', 'Nhan Vien']), LoaiMonAnController.getAllLoaiMonAn);
+router.get('/loai-menu', roleMiddleware(['Quan Ly', 'Nhan Vien']), LoaiMonAnController.getUniqueMenuTypes);
+router.get('/:id', roleMiddleware(['Quan Ly', 'Nhan Vien']), LoaiMonAnController.getLoaiMonAnById);
+router.delete('/:id', roleMiddleware(['Quan Ly']), LoaiMonAnController.deleteLoaiMonAn);
 
 module.exports = router;

@@ -15,6 +15,9 @@ const loggerMiddleware = require('../middlewares/logger');
 // console.log('rateLimitMiddleware:', typeof rateLimitMiddleware);
 // console.log('loggerMiddleware:', typeof loggerMiddleware);
 
+// Debug route loading
+console.log('BaoCaoDoanhThu routes loaded');
+
 router.use(rateLimitMiddleware);
 router.use(loggerMiddleware);
 
@@ -27,6 +30,13 @@ router.post(
 );
 
 // Other routes (e.g., GET, PUT, DELETE)
+router.get(
+  '/summary',
+  authMiddleware,
+  roleMiddleware(['Quan Ly', 'Nhan Vien']),
+  BaoCaoDoanhThuController.getSummary
+);
+
 router.get(
   '/',
   authMiddleware,
@@ -46,6 +56,13 @@ router.delete(
   authMiddleware,
   roleMiddleware(['Quan Ly']),
   BaoCaoDoanhThuController.deleteBaoCao
+);
+
+router.get(
+  '/export',
+  authMiddleware,
+  roleMiddleware(['Quan Ly']),
+  BaoCaoDoanhThuController.exportBaoCao
 );
 
 module.exports = router;

@@ -45,6 +45,10 @@ class ThongTinKhachHangService {
 
     return await ThongTinKhachHangModel.delete(khachhang_id);
   }
+
+  static async getTotalKhachHang() {
+    return await ThongTinKhachHangModel.countAll();
+  }
 }
 
 module.exports = ThongTinKhachHangService;

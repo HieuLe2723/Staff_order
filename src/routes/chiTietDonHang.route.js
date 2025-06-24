@@ -27,6 +27,14 @@ router.get(
   ChiTietDonHangController.getChiTietDonHangById
 );
 
+// Lấy chi tiết đơn hàng theo id phiên
+router.get(
+  '/by-session/:sessionId',
+  authMiddleware,
+  roleMiddleware(['Quan Ly', 'Nhan Vien']),
+  ChiTietDonHangController.getChiTietDonHangBySessionId
+);
+
 router.put(
   '/:id',
   authMiddleware,
@@ -35,11 +43,30 @@ router.put(
   ChiTietDonHangController.updateChiTietDonHang
 );
 
-router.delete(
-  '/:id',
+
+
+// Ra món hàng loạt
+router.patch(
+  '/serve-bulk',
   authMiddleware,
-  roleMiddleware(['Quan Ly']),
-  ChiTietDonHangController.deleteChiTietDonHang
+  roleMiddleware(['Quan Ly', 'Nhan Vien']),
+  ChiTietDonHangController.serveDishesBulk
+);
+
+// Ra món
+router.patch(
+  '/:id/serve',
+  authMiddleware,
+  roleMiddleware(['Quan Ly', 'Nhan Vien']),
+  ChiTietDonHangController.serveDish
+);
+
+// Endpoint mới để cập nhật số lượng đã ra món
+router.post(
+  '/update-so-luong-ra',
+  authMiddleware,
+  roleMiddleware(['Quan Ly', 'Nhan Vien']),
+  ChiTietDonHangController.updateSoLuongDaRa
 );
 
 module.exports = router;

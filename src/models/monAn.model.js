@@ -2,16 +2,35 @@
 const pool = require('../config/db.config');
 
 class MonAnModel {
-  static async create({ ten_mon, loai_id, gia, hinh_anh }) {
+  static async findByLoaiId(loai_id) {
+    try {
+      const [rows] = await pool.query(
+        'SELECT * FROM MonAn WHERE loai_id = ?',
+        [loai_id]
+      );
+      return rows;
+    } catch (error) {
+      throw error;
+    }
+  }
+  static async create({ ten_mon, loai_id, gia, hinh_anh = 'default_dish.jpg' }) {
     try {
       const [result] = await pool.query(
         'INSERT INTO MonAn (ten_mon, loai_id, gia, hinh_anh) VALUES (?, ?, ?, ?)',
-        [ten_mon, loai_id, gia, hinh_anh]
+        [ten_mon, loai_id, gia, hinh_anh || 'default_dish.jpg']
       );
       if (result.affectedRows === 0) {
         throw new Error('Failed to create dish');
       }
-      return { monan_id: result.insertId, ten_mon, loai_id, gia, khoa: 0, hinh_anh, ngay_khoa: null };
+      return { 
+        monan_id: result.insertId, 
+        ten_mon, 
+        loai_id, 
+        gia, 
+        khoa: 0, 
+        hinh_anh: hinh_anh || 'default_dish.jpg', 
+        ngay_khoa: null 
+      };
     } catch (error) {
       throw error;
     }

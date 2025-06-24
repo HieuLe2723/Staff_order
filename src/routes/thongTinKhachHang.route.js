@@ -19,6 +19,14 @@ router.post(
   ThongTinKhachHangController.createKhachHang
 );
 
+// Lấy tổng số khách hàng
+router.get(
+  '/total',
+  authMiddleware,
+  roleMiddleware(['Quan Ly', 'Nhan Vien']),
+  ThongTinKhachHangController.getTotalKhachHang
+);
+
 // Get customer by ID (Admin, employee, or customer themselves)
 router.get(
   '/:khachhang_id',

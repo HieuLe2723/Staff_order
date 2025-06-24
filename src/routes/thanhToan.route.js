@@ -11,11 +11,20 @@ const loggerMiddleware = require('../middlewares/logger');
 router.use(loggerMiddleware);
 router.use(rateLimitMiddleware);
 
+// Checkout a session
+router.post(
+  '/checkout',
+  authMiddleware,
+  roleMiddleware(['Quan Ly', 'Nhan Vien']),
+  // We can add a specific validation schema for checkout if needed
+  ThanhToanController.checkout
+);
+
 // Create a new payment (Admin or employee)
 router.post(
   '/',
   authMiddleware,
-  roleMiddleware(['QuanLy', 'NhanVien']),
+  roleMiddleware(['Quan Ly', 'Nhan Vien']),
   validate(schemas.thanhToan), // Sửa thanhToanSchema thành schemas.thanhToan
   ThanhToanController.createThanhToan
 );
@@ -26,6 +35,14 @@ router.get(
   authMiddleware,
   roleMiddleware(['Quan Ly', 'Nhan Vien']),
   ThanhToanController.getThanhToan
+);
+
+// Tạo URL thanh toán VNPay cho phiên
+router.post(
+  '/:phien_id/create-vnpay-url',
+  authMiddleware,
+  roleMiddleware(['Quan Ly', 'Nhan Vien']),
+  ThanhToanController.createVnPayUrl
 );
 
 // Update payment (Admin or employee)

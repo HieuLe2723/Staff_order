@@ -21,7 +21,9 @@ class BaoCaoChiTietMonAnModel {
       [baocao_monan_id]
     );
     if (!rows[0]) {
-      throw new Error('Không tìm thấy chi tiết báo cáo với baocao_monan_id cung cấp');
+      const err = new Error('Không tìm thấy chi tiết báo cáo với baocao_monan_id cung cấp');
+      err.statusCode = 404;
+      throw err;
     }
     return rows[0];
   }

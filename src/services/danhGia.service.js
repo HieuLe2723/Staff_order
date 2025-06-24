@@ -5,12 +5,8 @@ const ThongTinKhachHangModel = require('../models/thongTinKhachHang.model'); // 
 const PhienSuDungBanModel = require('../models/phienSuDungBan.model'); // Giả sử model PhienSuDungBan
 
 class DanhGiaService {
-  static async createDanhGia({ nhanvien_id, khachhang_id, phien_id, diem_so, binh_luan }, user) {
-    // Kiểm tra quyền (chỉ khách hàng được đánh giá)
-    if (user.role !== 'KhachHang') {
-      throw new Error('Chỉ khách hàng mới có thể tạo đánh giá');
-    }
-
+  static async createDanhGia({ nhanvien_id, khachhang_id, phien_id, diem_so, binh_luan }) {
+    // Logic kiểm tra sự tồn tại của các ID liên quan đã được xử lý trong Model.
     return await DanhGiaModel.create({ nhanvien_id, khachhang_id, phien_id, diem_so, binh_luan });
   }
 
@@ -26,6 +22,24 @@ class DanhGiaService {
     }
 
     return await DanhGiaModel.delete(danhgia_id);
+  }
+
+  static async getTotalDanhGia() {
+    return await DanhGiaModel.countAll();
+  }
+
+  static async getTotalPoints() {
+    return await DanhGiaModel.getTotalPoints();
+  }
+
+  static async getAverageRating() {
+    const total = await DanhGiaModel.countAll();
+    const totalPoints = await DanhGiaModel.getTotalPoints();
+    return total > 0 ? (totalPoints / total).toFixed(1) : 0;
+  }
+
+  static async getTotalCustomers() {
+    return await DanhGiaModel.countUniqueCustomers();
   }
 }
 

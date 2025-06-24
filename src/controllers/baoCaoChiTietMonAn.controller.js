@@ -25,6 +25,9 @@ class BaoCaoChiTietMonAnController {
       const baoCaoMonAn = await BaoCaoChiTietMonAnService.getBaoCaoMonAnById(id);
       return res.json(ResponseUtils.success(baoCaoMonAn));
     } catch (err) {
+      if (err.statusCode === 404) {
+        return res.status(404).json({ success: false, message: err.message });
+      }
       next(err);
     }
   }
@@ -48,8 +51,18 @@ class BaoCaoChiTietMonAnController {
   static async deleteBaoCaoMonAn(req, res, next) {
     try {
       const { id } = req.params;
-      const result = await BaoCaoChiTietMonAnService.deleteBaoCaoMonAn(id);
-      return res.json(ResponseUtils.success(result, 'Xóa chi tiết báo cáo thành công'));
+      await BaoCaoChiTietMonAnService.deleteBaoCaoMonAn(id);
+      return res.json(ResponseUtils.success(null, 'Xóa chi tiết báo cáo thành công'));
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  static async getBestSellers(req, res, next) {
+    try {
+      const limit = parseInt(req.query.limit) || 5;
+      const bestSellers = await BaoCaoChiTietMonAnService.getBestSellers(limit);
+      return res.json(ResponseUtils.success(bestSellers));
     } catch (err) {
       next(err);
     }

@@ -1,4 +1,4 @@
-// src/models/datBan.model.js
+
 const pool = require('../config/db.config');
 
 class DatBanModel {
@@ -13,7 +13,7 @@ class DatBanModel {
     return rows.map(r => r.ban_id);
   }
   // Tạo đơn đặt bàn (chỉ cho 1 bàn, dùng cho group sẽ xử lý ở service)
-  static async create({ khachhang_id, ban_id, so_khach, thoi_gian_dat, ghi_chu, trang_thai = 'ChoXuLy' }) {
+  static async create({ khachhang_id, ban_id, so_khach, so_tien_coc = 0, thoi_gian_dat, ghi_chu, trang_thai = 'ChoXuLy' }) {
     const validStatuses = ['ChoXuLy', 'DaXacNhan', 'DaHuy', 'DaDat'];
     if (trang_thai && !validStatuses.includes(trang_thai)) {
       throw new Error('Giá trị trang_thai không hợp lệ. Chỉ chấp nhận: ChoXuLy, DaXacNhan, DaHuy');
@@ -28,10 +28,10 @@ class DatBanModel {
       if (!ban[0]) throw new Error('Không tìm thấy bàn với ban_id cung cấp');
     }
     const [result] = await pool.query(
-      'INSERT INTO DatBan (khachhang_id, ban_id, so_khach, thoi_gian_dat, ghi_chu, trang_thai) VALUES (?, ?, ?, ?, ?, ?)',
-      [khachhang_id || null, ban_id || null, so_khach, thoi_gian_dat, ghi_chu || null, trang_thai]
+      'INSERT INTO DatBan (khachhang_id, ban_id, so_khach, so_tien_coc, thoi_gian_dat, ghi_chu, trang_thai) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [khachhang_id || null, ban_id || null, so_khach, so_tien_coc, thoi_gian_dat, ghi_chu || null, trang_thai]
     );
-    return { datban_id: result.insertId, khachhang_id, ban_id, so_khach, thoi_gian_dat, ghi_chu, trang_thai, ngay_tao: new Date() };
+    return { datban_id: result.insertId, khachhang_id, ban_id, so_khach, so_tien_coc, thoi_gian_dat, ghi_chu, trang_thai, ngay_tao: new Date() };
   }
 
   static async findById(datban_id) {
@@ -107,7 +107,7 @@ class DatBanModel {
     return rows;
   }
 
-  static async update(datban_id, { khachhang_id, ban_id, so_khach, thoi_gian_dat, ghi_chu, trang_thai }) {
+  static async update(datban_id, { khachhang_id, ban_id, so_khach, so_tien_coc = 0, thoi_gian_dat, ghi_chu, trang_thai }) {
     const validStatuses = ['ChoXuLy', 'DaXacNhan', 'DaHuy', 'DaDat'];
     if (trang_thai && !validStatuses.includes(trang_thai)) {
       throw new Error('Giá trị trang_thai không hợp lệ. Chỉ chấp nhận: ChoXuLy, DaXacNhan, DaHuy');
@@ -122,8 +122,8 @@ class DatBanModel {
     }
 
     const [result] = await pool.query(
-      'UPDATE DatBan SET khachhang_id = ?, ban_id = ?, so_khach = ?, thoi_gian_dat = ?, ghi_chu = ?, trang_thai = ? WHERE datban_id = ?',
-      [khachhang_id, ban_id, so_khach, thoi_gian_dat, ghi_chu, trang_thai, datban_id]
+      'UPDATE DatBan SET khachhang_id = ?, ban_id = ?, so_khach = ?, so_tien_coc = ?, thoi_gian_dat = ?, ghi_chu = ?, trang_thai = ? WHERE datban_id = ?',
+      [khachhang_id, ban_id, so_khach, so_tien_coc, thoi_gian_dat, ghi_chu, trang_thai, datban_id]
     );
     if (result.affectedRows === 0) {
       throw new Error('Không tìm thấy đặt bàn với datban_id cung cấp');
@@ -140,6 +140,23 @@ class DatBanModel {
       throw new Error('Không tìm thấy đặt bàn với datban_id cung cấp');
     }
     return { datban_id };
+  }
+
+  // Thêm các trường mới vào model
+  static async updateTrangThai(datban_id, trang_thai) {
+    await pool.query('UPDATE DatBan SET trang_thai = ? WHERE datban_id = ?', [trang_thai, datban_id]);
+    // Nếu chuyển sang SanSang thì xóa các bàn đã đặt khỏi DatBan_Ban
+    if (trang_thai === 'SanSang') {
+      await pool.query('DELETE FROM DatBan_Ban WHERE datban_id = ?', [datban_id]);
+    }
+  }
+
+  static async updateTienDatCoc(datban_id, so_tien_coc) {
+    await pool.query('UPDATE DatBan SET so_tien_coc = ? WHERE datban_id = ?', [so_tien_coc, datban_id]);
+  }
+
+  static async updateThoiGianDatCoc(datban_id, thoi_gian_dat_coc) {
+    await pool.query('UPDATE DatBan SET thoi_gian_dat_coc = ? WHERE datban_id = ?', [thoi_gian_dat_coc, datban_id]);
   }
 }
 

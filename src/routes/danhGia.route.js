@@ -15,22 +15,30 @@ router.use(loggerMiddleware);
 router.post(
   '/',
   authMiddleware,
-  roleMiddleware(['Khach Hang']),
+  roleMiddleware(['Quan Ly', 'Nhan Vien']),
   validate(schemas.evaluation),
   DanhGiaController.createDanhGia
+);
+
+// Lấy tổng số đánh giá
+router.get(
+  '/total',
+  authMiddleware,
+  roleMiddleware(['Quan Ly', 'Nhan Vien']),
+  DanhGiaController.getTotalDanhGia
 );
 
 router.get(
   '/:id',
   authMiddleware,
-  roleMiddleware(['Quan Ly', 'Khach Hang']),
+  roleMiddleware(['Quan Ly', 'Nhan Vien']),
   DanhGiaController.getDanhGiaById
 );
 
 router.delete(
   '/:id',
   authMiddleware,
-  roleMiddleware(['Quan Ly', 'Khach Hang']),
+  roleMiddleware(['Quan Ly']),
   DanhGiaController.deleteDanhGia
 );
 

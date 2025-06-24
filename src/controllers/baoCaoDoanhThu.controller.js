@@ -54,8 +54,30 @@ class BaoCaoDoanhThuController {
   static async deleteBaoCao(req, res, next) {
     try {
       const { id } = req.params;
-      const result = await BaoCaoDoanhThuService.deleteBaoCao(id);
-      return res.json(ResponseUtils.success(result, 'Xóa báo cáo thành công'));
+      await BaoCaoDoanhThuService.deleteBaoCao(id);
+      return res.json(ResponseUtils.success(null, 'Xóa báo cáo thành công'));
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  static async getSummary(req, res, next) {
+    try {
+      const summary = await BaoCaoDoanhThuService.getSummary();
+      return res.json(ResponseUtils.success(summary));
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  static async exportBaoCao(req, res, next) {
+    try {
+      // Lấy params lọc từ query string
+      const { loai_bao_cao, thang, quy, nam, ngay_bao_cao } = req.query;
+      // Gọi service để lấy dữ liệu báo cáo (có thể tuỳ chỉnh xuất file Excel, CSV, PDF...)
+      const data = await BaoCaoDoanhThuService.getAllBaoCao({ loai_bao_cao, thang, quy, nam, ngay_bao_cao });
+      // Ở đây trả về JSON, thực tế có thể trả về file (Excel, CSV, PDF...)
+      return res.json({ success: true, data });
     } catch (err) {
       next(err);
     }

@@ -8,7 +8,13 @@ class LoaiMonAnController {
   }
 
   static async getAllLoaiMonAn(req, res) {
-    const loaiMonAnList = await LoaiMonAnService.getAllLoaiMonAn();
+    const { loai_menu } = req.query;
+    let loaiMonAnList;
+    if (loai_menu) {
+      loaiMonAnList = await LoaiMonAnService.getLoaiMonAnByMenu(loai_menu);
+    } else {
+      loaiMonAnList = await LoaiMonAnService.getAllLoaiMonAn();
+    }
     return res.status(200).json(ResponseUtils.success(loaiMonAnList));
   }
 
@@ -20,6 +26,15 @@ class LoaiMonAnController {
   static async deleteLoaiMonAn(req, res) {
     await LoaiMonAnService.deleteLoaiMonAn(req.params.id);
     return res.status(200).json(ResponseUtils.success(null, 'Dish category deleted successfully'));
+  }
+
+  static async getUniqueMenuTypes(req, res) {
+    try {
+      const menuTypes = await LoaiMonAnService.getUniqueMenuTypes();
+      return res.status(200).json(ResponseUtils.success(menuTypes));
+    } catch (error) {
+      return res.status(500).json(ResponseUtils.error('Internal Server Error'));
+    }
   }
 }
 

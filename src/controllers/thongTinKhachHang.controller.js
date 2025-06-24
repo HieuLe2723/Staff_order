@@ -46,6 +46,15 @@ class ThongTinKhachHangController {
       next(err);
     }
   }
+
+  static async getTotalKhachHang(req, res, next) {
+    try {
+      const total = await ThongTinKhachHangService.getTotalKhachHang();
+      return res.status(200).json({ total });
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 
 module.exports = ThongTinKhachHangController;

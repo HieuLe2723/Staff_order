@@ -19,6 +19,14 @@ const loggerMiddleware = require('../middlewares/logger');
 router.use(rateLimitMiddleware);
 router.use(loggerMiddleware);
 
+// Lấy danh sách món bán chạy
+router.get(
+  '/best-sellers',
+  authMiddleware,
+  roleMiddleware(['Quan Ly', 'Nhan Vien']),
+  BaoCaoChiTietMonAnController.getBestSellers
+);
+
 router.post(
   '/',
   authMiddleware,

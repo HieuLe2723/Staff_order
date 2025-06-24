@@ -26,6 +26,14 @@ router.post(
   BanNhaHangController.createBan
 );
 
+// Danh sách bàn kèm thông tin phiên
+router.get(
+  '/active',
+  authMiddleware,
+  roleMiddleware(['Quan Ly', 'Nhan Vien']),
+  BanNhaHangController.getActiveBans
+);
+
 // Các tuyến đường khác
 router.get(
   '/:id',
@@ -54,6 +62,14 @@ router.delete(
   authMiddleware,
   roleMiddleware(['Quan Ly']),
   BanNhaHangController.deleteBan
+);
+
+// Danh sách bàn theo khu vực, kèm trạng_thai_ban và time_open_seconds
+router.get(
+  '/khuvuc/:id/ban',
+  authMiddleware,
+  roleMiddleware(['Quan Ly', 'Nhan Vien', 'Khach Hang']),
+  BanNhaHangController.getBansByKhuVuc
 );
 
 module.exports = router;

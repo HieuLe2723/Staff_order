@@ -34,6 +34,8 @@ class AuthService {
       };
     }
 
+    
+
     const payload = {
       nhanvien_id: employee.nhanvien_id,
       role_id: employee.role_id,
@@ -53,6 +55,7 @@ class AuthService {
       role_id: employee.role_id,
       role_name: role.role_name
     };
+
   }
 
   static async refreshToken(refreshToken) {

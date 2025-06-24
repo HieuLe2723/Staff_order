@@ -4,19 +4,32 @@ const ResponseUtils = require('../utils/response');
 const HelperUtils = require('../utils/helper');
 
 const validate = (schema) => (req, res, next) => {
-  Object.keys(req.body).forEach((key) => {
-    if (typeof req.body[key] === 'string') {
-      req.body[key] = HelperUtils.sanitizeString(req.body[key]);
+  try {
+    // Initialize req.body as empty object if it's undefined or null
+    if (!req.body) {
+      req.body = {};
     }
-  });
 
-  const { error } = schema.validate(req.body, { abortEarly: false });
-  if (error) {
-    const messages = error.details.map((detail) => detail.message).join(', ');
-    return res.status(400).json(ResponseUtils.error(messages, 400));
+    // Sanitize string values
+    if (req.body && typeof req.body === 'object') {
+      Object.keys(req.body).forEach((key) => {
+        if (typeof req.body[key] === 'string') {
+          req.body[key] = HelperUtils.sanitizeString(req.body[key]);
+        }
+      });
+    }
+
+    const { error } = schema.validate(req.body, { abortEarly: false });
+    if (error) {
+      const messages = error.details.map((detail) => detail.message).join(', ');
+      return res.status(400).json(ResponseUtils.error(messages, 400));
+    }
+
+    next();
+  } catch (err) {
+    console.error('Validation error:', err);
+    return res.status(500).json(ResponseUtils.error('Lỗi xác thực dữ liệu', 500));
   }
-
-  next();
 };
 
 const schemas = {
@@ -34,27 +47,40 @@ const schemas = {
     ghi_chu: Joi.string().allow('', null),
     trang_thai: Joi.string().valid('ChoXuLy', 'DaXacNhan', 'DaHuy', 'DaDat').optional(),
     ho_ten: Joi.string().max(100).allow('', null), // bổ sung
-    so_dien_thoai: Joi.string().pattern(/^((\+84|0)[0-9]{9,10})$/).allow('', null) // bổ sung
+    so_dien_thoai: Joi.string().pattern(/^((\+84|0)[0-9]{9,10})$/).allow('', null), // bổ sung
+    so_tien_coc: Joi.number().precision(2).min(0).optional()
+      .description('Số tiền đặt cọc, nếu có')
+      .messages({
+        'number.base': 'Số tiền đặt cọc phải là số',
+        'number.precision': 'Số tiền đặt cọc tối đa 2 chữ số thập phân',
+        'number.min': 'Số tiền đặt cọc không được âm'
+      })
   }).or('ban_id', 'ban_ids'),
 
   order: Joi.object({
     phien_id: Joi.number().integer().min(1).required(),
-    loai_menu: Joi.string().max(50).allow(''),
+    loai_id: Joi.number().integer().min(1).optional(),
     khuyenmai_id: Joi.number().integer().min(1).allow(null),
+    loai_menu: Joi.string().allow(null, ''),
     gia_tri_giam: Joi.number().precision(2).min(0).optional(),
     tong_tien: Joi.number().precision(2).min(0).optional(),
     trang_thai: Joi.string().valid('ChoXuLy', 'DangNau', 'DaPhucVu', 'DaThanhToan', 'DaHuy').optional(),
     hanh_dong: Joi.string().valid('ThemMon', 'XoaMon', 'HuyMon', 'HoanTat').optional(),
     mo_ta_hanh_dong: Joi.string().max(255).optional(),
     thoi_gian_hanh_dong: Joi.date().iso().optional(),
+    so_nguoi_lon: Joi.number().integer().min(0).optional(),
+    so_tre_em_co_phi: Joi.number().integer().min(0).optional(),
+    so_tre_em_khong_phi: Joi.number().integer().min(0).optional(),
     items: Joi.array().items(
       Joi.object({
         monan_id: Joi.number().integer().min(1).required(),
         so_luong: Joi.number().integer().min(1).required(),
         ghi_chu: Joi.string().max(255).allow('')
       })
-    ).required()
+    ).optional()
   }),
+
+
 
   customer: Joi.object({
     ho_ten: Joi.string().max(100).allow(''),
@@ -105,19 +131,6 @@ const schemas = {
     trang_thai: Joi.string().valid('ChoXuLy', 'HoanTat', 'ThatBai').required()
   }),
 
-  phienSuDungBan: Joi.object({
-    ban_id: Joi.number().integer().min(1).required(),
-    ban_id_goc: Joi.number().integer().min(1).optional().allow(null),
-    khachhang_id: Joi.number().integer().min(1).optional().allow(null),
-    nhanvien_id: Joi.string().max(10).required(),
-    so_khach_nguoi_lon: Joi.number().integer().min(0).required(),
-    so_khach_tre_em_co_phi: Joi.number().integer().min(0).optional(),
-    so_khach_tre_em_mien_phi: Joi.number().integer().min(0).optional(),
-    loai_khach: Joi.string().max(50).optional().allow(''),
-    loai_thao_tac: Joi.string().valid('GopBan', 'TachBan', 'ChuyenBan').optional().allow(null),
-    thong_bao_thanh_toan: Joi.string().max(255).optional().allow(null)
-  }),
-
   role: Joi.object({
     role_name: Joi.string().max(50).required()
   }),
@@ -144,8 +157,8 @@ const schemas = {
     ten_mon: Joi.string().max(100).required(),
     loai_id: Joi.number().integer().min(1).required(),
     gia: Joi.number().precision(2).positive().required(),
-    hinh_anh: Joi.string().max(255).allow('')
-  }),
+    hinh_anh: Joi.string().max(255).allow('', null).default('default_dish.jpg')
+  }), 
 
   lichSuBaoTri: Joi.object({
     thietbi_id: Joi.number().integer().min(1).required(),
@@ -254,7 +267,7 @@ const schemas = {
   banNhaHang: Joi.object({
     ten_ban: Joi.string().max(50).required(), // Khớp với ten_ban VARCHAR(50) NOT NULL
     khuvuc_id: Joi.number().integer().min(1).required(), // Khớp với khuvuc_id INT
-    trang_thai: Joi.string().valid('SanSang', 'DangSuDung', 'DaDat').optional(), // Khớp với SQL
+    trang_thai: Joi.string().valid('SanSang', 'DangSuDung', 'DaDat', 'DaGoiMon').optional(), // Khớp với SQL
     qr_code_url: Joi.string().max(255).uri().optional() // Khớp với qr_code_url VARCHAR(255)
   }),
 
@@ -283,6 +296,41 @@ const schemas = {
     so_gio_lam: Joi.number().precision(2).min(0).required(),
     luong: Joi.number().precision(2).min(0).required(),
     trang_thai: Joi.string().valid('ChuaThanhToan', 'DaThanhToan').optional()
+  }),
+
+  thanhToan: Joi.object({
+    phien_id: Joi.number().integer().min(1).required(),
+    so_tien: Joi.number().precision(2).min(0).required(),
+    khuyenmai_id: Joi.number().integer().min(1).optional().allow(null),
+    phuong_thuc: Joi.string().valid('TienMat', 'VNPay', 'Momo', 'ZaloPay').required(),
+    ma_giao_dich: Joi.string().max(100).optional().allow(null, ''),
+    ma_phan_hoi: Joi.string().max(10).optional().allow(null, ''),
+    trang_thai: Joi.string().valid('ChoXuLy', 'HoanTat', 'ThatBai').optional(),
+    la_giao_dich_demo: Joi.boolean().optional()
+  }),
+
+  phienSuDungBan: Joi.object({
+    ban_id: Joi.number().integer().min(1).required(),
+    ban_id_goc: Joi.number().integer().min(1).optional().allow(null),
+    khachhang_id: Joi.number().integer().min(1).optional().allow(null),
+    nhanvien_id: Joi.string().max(10).required(),
+    so_khach_nguoi_lon: Joi.number().integer().min(0).required(),
+    so_khach_tre_em_co_phi: Joi.number().integer().min(0).optional().default(0),
+    so_khach_tre_em_mien_phi: Joi.number().integer().min(0).optional().default(0),
+    loai_khach: Joi.string().valid('KhachLe', 'KhachDoan', 'KhachDatTruoc').optional(),
+    loai_menu: Joi.string().max(50).optional().default('ALaCarte'),
+    loai_thao_tac: Joi.string().valid('GopBan', 'TachBan', 'ChuyenBan').optional().allow(null),
+    thong_bao_thanh_toan: Joi.boolean().optional().allow(null)
+  }),
+
+  serveDishes: Joi.object({
+    item_ids: Joi.array().items(Joi.number().integer().min(1)).min(1).required()
+      .description('Mảng các ID của chi tiết đơn hàng cần phục vụ')
+      .messages({
+        'array.base': 'item_ids phải là một mảng',
+        'array.min': 'Phải có ít nhất một món ăn để phục vụ',
+        'any.required': 'item_ids là trường bắt buộc'
+      })
   })
 };
 

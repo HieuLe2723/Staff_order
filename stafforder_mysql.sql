@@ -1,5 +1,5 @@
 -- Drop database if it exists
-DROP DATABASE IF EXISTS StaffOrder;
+DROP DATABASE IF EXISTS StaffOrder ;
 
 -- Create database
 CREATE DATABASE StaffOrder CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -9,7 +9,7 @@ USE StaffOrder;
 CREATE TABLE Role (
     role_id INT AUTO_INCREMENT PRIMARY KEY,
     role_name VARCHAR(50) NOT NULL
-) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+);
 
 -- 2. NhanVien (Employee) table
 CREATE TABLE NhanVien (
@@ -22,13 +22,14 @@ CREATE TABLE NhanVien (
     ngay_tao DATETIME DEFAULT CURRENT_TIMESTAMP,
     hoat_dong TINYINT(1) DEFAULT 1,
     FOREIGN KEY (role_id) REFERENCES Role(role_id)
-) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+);
 
 -- 3. KhuVuc (Zone) table
 CREATE TABLE KhuVuc (
     khuvuc_id INT AUTO_INCREMENT PRIMARY KEY,
-    ten_khuvuc VARCHAR(100) NOT NULL
-) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    ten_khuvuc VARCHAR(100) NOT NULL,
+    soban INT NOT NULL
+);
 
 -- 4. BanNhaHang (Table) table
 CREATE TABLE BanNhaHang (
@@ -38,7 +39,7 @@ CREATE TABLE BanNhaHang (
     trang_thai VARCHAR(20) DEFAULT 'SanSang', -- SanSang | DangSuDung | DaDat
     qr_code_url VARCHAR(255), -- Added for QR code
     FOREIGN KEY (khuvuc_id) REFERENCES KhuVuc(khuvuc_id)
-) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+);
 
 -- 5. ThongTinKhachHang (Customer Info) table
 CREATE TABLE ThongTinKhachHang (
@@ -51,7 +52,7 @@ CREATE TABLE ThongTinKhachHang (
     loai_nhom VARCHAR(50), -- GiaDinh | BanBe | CapDoi
     ngay_tao DATETIME DEFAULT CURRENT_TIMESTAMP,
     ngay_cap_nhat DATETIME
-) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+);
 
 -- 6. DatBan (Reservation) table
 CREATE TABLE DatBan (
@@ -65,7 +66,7 @@ CREATE TABLE DatBan (
     trang_thai VARCHAR(20) DEFAULT 'ChoXuLy', -- ChoXuLy | DaXacNhan | DaHuy
     FOREIGN KEY (khachhang_id) REFERENCES ThongTinKhachHang(khachhang_id),
     FOREIGN KEY (ban_id) REFERENCES BanNhaHang(ban_id)
-) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+);
 
 -- 7. PhienSuDungBan (Table Session) table
 CREATE TABLE PhienSuDungBan (
@@ -82,17 +83,20 @@ CREATE TABLE PhienSuDungBan (
     thoi_gian_ket_thuc DATETIME,
     loai_thao_tac VARCHAR(20), -- GopBan | TachBan | ChuyenBan | NULL
     thong_bao_thanh_toan VARCHAR(255), -- Payment notification
+    khuyenmai_id INT, -- Promotion applied to the whole session
     FOREIGN KEY (ban_id) REFERENCES BanNhaHang(ban_id),
     FOREIGN KEY (ban_id_goc) REFERENCES BanNhaHang(ban_id),
     FOREIGN KEY (khachhang_id) REFERENCES ThongTinKhachHang(khachhang_id),
-    FOREIGN KEY (nhanvien_id) REFERENCES NhanVien(nhanvien_id)
-) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    FOREIGN KEY (nhanvien_id) REFERENCES NhanVien(nhanvien_id),
+    FOREIGN KEY (khuyenmai_id) REFERENCES KhuyenMai(khuyenmai_id)
+);
 
 -- 8. LoaiMonAn (Dish Category) table
 CREATE TABLE LoaiMonAn (
     loai_id INT AUTO_INCREMENT PRIMARY KEY,
-    ten_loai VARCHAR(100) NOT NULL
-) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    ten_loai VARCHAR(100) NOT NULL,
+    loai_menu VARCHAR(50) NOT NULL
+);
 
 -- 9. MonAn (Dish) table
 CREATE TABLE MonAn (
@@ -104,23 +108,26 @@ CREATE TABLE MonAn (
     ngay_khoa DATETIME,
     hinh_anh VARCHAR(255),
     FOREIGN KEY (loai_id) REFERENCES LoaiMonAn(loai_id)
-) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+);
 
 -- 10. DonHang (Order) table
 CREATE TABLE DonHang (
     donhang_id INT AUTO_INCREMENT PRIMARY KEY,
-    phien_id INT,
+    phien_id INT NOT NULL,
     loai_menu VARCHAR(50),
     khuyenmai_id INT,
-    gia_tri_giam DECIMAL(10,2) DEFAULT 0,
-    tong_tien DECIMAL(10,2) DEFAULT 0,
-    trang_thai VARCHAR(20) DEFAULT 'ChoXuLy', -- ChoXuLy | DangNau | DaPhucVu | DaThanhToan | DaHuy
+    hanh_dong VARCHAR(20),
+    mo_ta_hanh_dong TEXT,
+    so_nguoi_lon INT DEFAULT 0,
+    so_tre_em_co_phi INT DEFAULT 0,
+    so_tre_em_khong_phi INT DEFAULT 0,
+    gia_tri_giam DECIMAL(10, 2) DEFAULT 0.00,
+    tong_tien DECIMAL(10, 2) DEFAULT 0.00,
+    trang_thai VARCHAR(20) DEFAULT 'ChoXuLy',
     ngay_tao DATETIME DEFAULT CURRENT_TIMESTAMP,
-    hanh_dong VARCHAR(50), -- ThemMon | XoaMon | HuyMon | HoanTat
-    mo_ta_hanh_dong VARCHAR(255),
-    thoi_gian_hanh_dong DATETIME,
-    FOREIGN KEY (phien_id) REFERENCES PhienSuDungBan(phien_id)
-) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    FOREIGN KEY (phien_id) REFERENCES PhienSuDungBan(phien_id),
+    FOREIGN KEY (khuyenmai_id) REFERENCES KhuyenMai(khuyenmai_id)
+);
 
 -- 11. ChiTietDonHang (Order Detail) table
 CREATE TABLE ChiTietDonHang (
@@ -130,10 +137,10 @@ CREATE TABLE ChiTietDonHang (
     so_luong INT NOT NULL,
     ghi_chu VARCHAR(255),
     thoi_gian_phuc_vu DATETIME,
-    trang_thai_phuc_vu VARCHAR(20) DEFAULT 'ChoNau', -- ChoNau | DangNau | DaPhucVu
+    trang_thai_phuc_vu VARCHAR(20) DEFAULT 'ChoNau', -- ChoNau | DangNau | DaPhucVu | DaHuy
     FOREIGN KEY (donhang_id) REFERENCES DonHang(donhang_id),
     FOREIGN KEY (monan_id) REFERENCES MonAn(monan_id)
-) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+);
 
 -- 12. KhuyenMai (Promotion) table
 CREATE TABLE KhuyenMai (
@@ -142,7 +149,7 @@ CREATE TABLE KhuyenMai (
     mo_ta VARCHAR(255),
     phan_tram_giam INT,
     ngay_het_han DATE
-) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+);
 
 -- 13. DanhGia (Evaluation) table
 CREATE TABLE DanhGia (
@@ -156,7 +163,7 @@ CREATE TABLE DanhGia (
     FOREIGN KEY (nhanvien_id) REFERENCES NhanVien(nhanvien_id),
     FOREIGN KEY (khachhang_id) REFERENCES ThongTinKhachHang(khachhang_id),
     FOREIGN KEY (phien_id) REFERENCES PhienSuDungBan(phien_id)
-) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+);
 
 -- 14. NguyenLieu (Raw Material) table
 CREATE TABLE NguyenLieu (
@@ -166,7 +173,7 @@ CREATE TABLE NguyenLieu (
     so_luong_con_lai DECIMAL(10,2) DEFAULT 0,
     nguong_canh_bao DECIMAL(10,2),
     trang_thai_canh_bao TINYINT(1) DEFAULT 0
-) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+);
 
 -- 15. PhieuNhapHang (Inventory Receipt) table
 CREATE TABLE PhieuNhapHang (
@@ -177,7 +184,7 @@ CREATE TABLE PhieuNhapHang (
     ghi_chu VARCHAR(255),
     trang_thai VARCHAR(20) DEFAULT 'ChoXacNhan', -- ChoXacNhan | DaXacNhan | DaHuy
     FOREIGN KEY (nhanvien_id) REFERENCES NhanVien(nhanvien_id)
-) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+);
 
 -- 16. ChiTietPhieuNhap (Inventory Receipt Detail) table
 CREATE TABLE ChiTietPhieuNhap (
@@ -189,7 +196,7 @@ CREATE TABLE ChiTietPhieuNhap (
     ghi_chu VARCHAR(255),
     FOREIGN KEY (phieunhap_id) REFERENCES PhieuNhapHang(phieunhap_id),
     FOREIGN KEY (nguyenlieu_id) REFERENCES NguyenLieu(nguyenlieu_id)
-) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+);
 
 -- 17. PhieuXuatHang (Inventory Issue) table
 CREATE TABLE PhieuXuatHang (
@@ -200,7 +207,7 @@ CREATE TABLE PhieuXuatHang (
     ghi_chu VARCHAR(255),
     trang_thai VARCHAR(20) DEFAULT 'ChoXacNhan', -- ChoXacNhan | DaXacNhan | DaHuy
     FOREIGN KEY (nhanvien_id) REFERENCES NhanVien(nhanvien_id)
-) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+);
 
 -- 18. ChiTietPhieuXuat (Inventory Issue Detail) table
 CREATE TABLE ChiTietPhieuXuat (
@@ -212,7 +219,7 @@ CREATE TABLE ChiTietPhieuXuat (
     ghi_chu VARCHAR(255),
     FOREIGN KEY (phieuxuat_id) REFERENCES PhieuXuatHang(phieuxuat_id),
     FOREIGN KEY (nguyenlieu_id) REFERENCES NguyenLieu(nguyenlieu_id)
-) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+);
 
 -- 19. ThietBi (Equipment) table
 CREATE TABLE ThietBi (
@@ -220,7 +227,7 @@ CREATE TABLE ThietBi (
     ten VARCHAR(100),
     so_luong INT DEFAULT 1,
     trang_thai VARCHAR(50) DEFAULT 'HoatDong' -- HoatDong | DangSuaChua | HuHong
-) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+);
 
 -- 20. MonAnNguyenLieu (Dish-Raw Material Link) table
 CREATE TABLE MonAnNguyenLieu (
@@ -228,25 +235,25 @@ CREATE TABLE MonAnNguyenLieu (
     nguyenlieu_id INT,
     so_luong_can DECIMAL(10,2),
     PRIMARY KEY (monan_id, nguyenlieu_id),
-    forEIGN KEY (monan_id) REFERENCES MonAn(monan_id),
+    FOREIGN KEY (monan_id) REFERENCES MonAn(monan_id),
     FOREIGN KEY (nguyenlieu_id) REFERENCES NguyenLieu(nguyenlieu_id)
-) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+);
 
 -- 21. ThanhToan (Payment) table
 CREATE TABLE ThanhToan (
     thanhtoan_id INT AUTO_INCREMENT PRIMARY KEY,
-    donhang_id INT,
+    phien_id INT NOT NULL,
     so_tien DECIMAL(10,2),
     khuyenmai_id INT,
-    phuong_thuc VARCHAR(50), -- TienMat | VNPay | Momo | ZaloPay
+    phuong_thuc VARCHAR(50), -- TienMat | VNPay
     ma_giao_dich VARCHAR(100),
     ma_phan_hoi VARCHAR(10),
     trang_thai VARCHAR(20) DEFAULT 'ChoXuLy', -- ChoXuLy | HoanTat | ThatBai
     ngay_tao DATETIME DEFAULT CURRENT_TIMESTAMP,
-    la_giao_dich_demo TINYINT(1) DEFAULT 0, -- 1: Demo, 0: Thực tế
-    FOREIGN KEY (donhang_id) REFERENCES DonHang(donhang_id),
+    la_giao_dich_demo TINYINT(1) DEFAULT 0, -- 1: Demo, 0: Real
+    FOREIGN KEY (phien_id) REFERENCES PhienSuDungBan(phien_id),
     FOREIGN KEY (khuyenmai_id) REFERENCES KhuyenMai(khuyenmai_id)
-) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+);
 
 -- 22. LichSuBaoTri (Equipment Maintenance History) table
 CREATE TABLE LichSuBaoTri (
@@ -256,7 +263,7 @@ CREATE TABLE LichSuBaoTri (
     ngay_bao_tri DATE,
     trang_thai VARCHAR(50), -- DaSua | DangXuLy | KhongSuaDuoc
     FOREIGN KEY (thietbi_id) REFERENCES ThietBi(thietbi_id)
-) CHARACTER SET utf Driven by Grok, created by xAI.mb4 COLLATE utf8mb4_unicode_ci;
+);
 
 -- 23. BaoCaoDoanhThu (Revenue Report) table
 CREATE TABLE BaoCaoDoanhThu (
@@ -269,7 +276,7 @@ CREATE TABLE BaoCaoDoanhThu (
     tong_doanh_thu DECIMAL(15,2),
     tong_don_hang INT,
     ngay_tao DATETIME DEFAULT CURRENT_TIMESTAMP
-) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+);
 
 -- 24. BaoCaoChiTietMonAn (Dish Revenue Detail) table
 CREATE TABLE BaoCaoChiTietMonAn (
@@ -280,7 +287,7 @@ CREATE TABLE BaoCaoChiTietMonAn (
     tong_doanh_thu_mon DECIMAL(10,2),
     FOREIGN KEY (baocao_id) REFERENCES BaoCaoDoanhThu(baocao_id),
     FOREIGN KEY (monan_id) REFERENCES MonAn(monan_id)
-) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+);
 
 -- 25. DanhGiaNhanVien (Employee Monthly Evaluation) table
 CREATE TABLE DanhGiaNhanVien (
@@ -292,13 +299,13 @@ CREATE TABLE DanhGiaNhanVien (
     binh_luan VARCHAR(255),
     ngay_tao DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (nhanvien_id) REFERENCES NhanVien(nhanvien_id)
-) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+);
 
 -- 26. CaiDatNgonNgu (Language Settings) table
 CREATE TABLE CaiDatNgonNgu (
     ma_ngon_ngu VARCHAR(10) PRIMARY KEY,
     ten_ngon_ngu VARCHAR(100)
-) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+);
 
 -- 27. KhachHangThanThiet (Loyal Customer) table
 CREATE TABLE KhachHangThanThiet (
@@ -308,7 +315,7 @@ CREATE TABLE KhachHangThanThiet (
     cap_bac VARCHAR(50), -- Bac | Vang | BachKim
     ngay_cap_nhat DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (khachhang_id) REFERENCES ThongTinKhachHang(khachhang_id)
-) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+);
 
 -- 28. LichSuDongBo (Sync History) table
 CREATE TABLE LichSuDongBo (
@@ -317,7 +324,8 @@ CREATE TABLE LichSuDongBo (
     loai_du_lieu VARCHAR(50),
     trang_thai VARCHAR(20), -- ThanhCong | ThatBai
     mo_ta VARCHAR(255)
-) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+);
+
 -- 30. CaLamViec (Shift) table
 CREATE TABLE CaLamViec (
     calamviec_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -325,7 +333,7 @@ CREATE TABLE CaLamViec (
     thoi_gian_bat_dau TIME NOT NULL, -- Start time of the shift
     thoi_gian_ket_thuc TIME NOT NULL, -- End time of the shift
     mo_ta VARCHAR(255)
-) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+);
 
 -- 31. PhanCaNhanVien (Employee Shift Assignment) table
 CREATE TABLE PhanCaNhanVien (
@@ -339,7 +347,7 @@ CREATE TABLE PhanCaNhanVien (
     ghi_chu VARCHAR(255),
     FOREIGN KEY (nhanvien_id) REFERENCES NhanVien(nhanvien_id),
     FOREIGN KEY (calamviec_id) REFERENCES CaLamViec(calamviec_id)
-) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+);
 
 -- 32. LuongNhanVien (Employee Salary) table
 CREATE TABLE LuongNhanVien (
@@ -354,9 +362,41 @@ CREATE TABLE LuongNhanVien (
     trang_thai VARCHAR(20) DEFAULT 'ChuaThanhToan', -- ChuaThanhToan | DaThanhToan
     FOREIGN KEY (nhanvien_id) REFERENCES NhanVien(nhanvien_id),
     FOREIGN KEY (phanca_id) REFERENCES PhanCaNhanVien(phanca_id)
-) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+);
 
+-- Bảng trung gian nhiều-nhiều giữa DatBan và BanNhaHang
+CREATE TABLE datban_ban (
+    datban_id INT,
+    ban_id INT,
+    PRIMARY KEY (datban_id, ban_id),
+    FOREIGN KEY (datban_id) REFERENCES DatBan(datban_id),
+    FOREIGN KEY (ban_id) REFERENCES BanNhaHang(ban_id)
+);
 
+CREATE TABLE LichSuDonHang (
+    lichsu_id   INT AUTO_INCREMENT,
+    donhang_id  INT NOT NULL,
+    nhanvien_id VARCHAR(10) NULL,
+    hanh_dong   VARCHAR(50) NOT NULL,
+    mo_ta       TEXT,
+    thoi_gian   DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (lichsu_id),                       
+    FOREIGN KEY (donhang_id)  REFERENCES DonHang(donhang_id),
+    FOREIGN KEY (nhanvien_id) REFERENCES NhanVien(nhanvien_id)
+);
+
+-- 33. ThongBao (Notification) table
+CREATE TABLE ThongBao (
+    thongbao_id INT AUTO_INCREMENT PRIMARY KEY,
+    nhanvien_id VARCHAR(10), -- Target employee (optional, null for system-wide)
+    role_id INT, -- Target role (optional)
+    noi_dung TEXT NOT NULL,
+    trang_thai VARCHAR(20) DEFAULT 'ChuaDoc', -- ChuaDoc | DaDoc
+    loai_thong_bao VARCHAR(50), -- CanhBaoNguyenLieu | ThanhToan | Khac
+    ngay_tao DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (nhanvien_id) REFERENCES NhanVien(nhanvien_id),
+    FOREIGN KEY (role_id) REFERENCES Role(role_id)
+);
 
 -- Triggers
 DELIMITER //
@@ -467,14 +507,14 @@ CREATE TRIGGER trg_GhiHanhDongDonHang
 AFTER UPDATE ON ChiTietDonHang
 FOR EACH ROW
 BEGIN
+    DECLARE ten_mon_an VARCHAR(100);
     IF NEW.trang_thai_phuc_vu != OLD.trang_thai_phuc_vu THEN
+        SELECT ten_mon INTO ten_mon_an FROM MonAn WHERE monan_id = NEW.monan_id;
         UPDATE DonHang
         SET 
             hanh_dong = 'CapNhatPhucVu',
-            mo_ta_hanh_dong = CONCAT('Cập nhật trạng thái phục vụ món ', m.ten_mon, ' thành ', NEW.trang_thai_phuc_vu),
-            thoi_gian_hanh_dong = NOW()
-        FROM MonAn m
-        WHERE donhang_id = NEW.donhang_id AND m.monan_id = NEW.monan_id;
+            mo_ta_hanh_dong = CONCAT('Cập nhật trạng thái phục vụ món ', ten_mon_an, ' thành ', NEW.trang_thai_phuc_vu)
+        WHERE donhang_id = NEW.donhang_id;
     END IF;
 END//
 
@@ -513,24 +553,26 @@ CREATE TRIGGER trg_ThongBaoThanhToan
 AFTER UPDATE ON ThanhToan
 FOR EACH ROW
 BEGIN
+    DECLARE v_ban_id INT;
+    DECLARE v_ten_ban VARCHAR(50);
+
     IF NEW.trang_thai = 'HoanTat' AND OLD.trang_thai != 'HoanTat' THEN
+        -- Get table info from the session
+        SELECT ban_id INTO v_ban_id FROM PhienSuDungBan WHERE phien_id = NEW.phien_id;
+        SELECT ten_ban INTO v_ten_ban FROM BanNhaHang WHERE ban_id = v_ban_id;
+
+        -- Update notification in the session table
         UPDATE PhienSuDungBan
         SET thong_bao_thanh_toan = CONCAT(
-            'Bàn ', bn.ten_ban, ' (ID: ', bn.ban_id, ') đã hoàn tất thanh toán cho đơn hàng ', NEW.donhang_id,
+            'Bàn ', v_ten_ban, ' (ID: ', v_ban_id, ') đã hoàn tất thanh toán cho phiên ID ', NEW.phien_id,
             IF(NEW.la_giao_dich_demo = 1, ' (Giao dịch Demo)', '')
         )
-        FROM DonHang dh
-        JOIN BanNhaHang bn ON PhienSuDungBan.ban_id = bn.ban_id
-        WHERE PhienSuDungBan.phien_id = dh.phien_id AND dh.donhang_id = NEW.donhang_id;
+        WHERE phien_id = NEW.phien_id;
 
+        -- Update table status to 'SanSang'
         UPDATE BanNhaHang
         SET trang_thai = 'SanSang'
-        WHERE ban_id = (
-            SELECT ps.ban_id
-            FROM DonHang dh
-            JOIN PhienSuDungBan ps ON dh.phien_id = ps.phien_id
-            WHERE dh.donhang_id = NEW.donhang_id
-        );
+        WHERE ban_id = v_ban_id;
     END IF;
 END//
 
@@ -637,62 +679,33 @@ CREATE TRIGGER trg_CanhBaoNguyenLieu
 AFTER UPDATE ON NguyenLieu
 FOR EACH ROW
 BEGIN
-    IF NEW.so_luong_con_lai <= NEW.nguong_canh_bao AND NEW.trang_thai_canh_bao = 0 THEN
-        INSERT INTO PhienSuDungBan (
-            nhanvien_id,
-            thong_bao_thanh_toan,
-            thoi_gian_bat_dau
-        )
-        SELECT 
-            nv.nhanvien_id,
-            CONCAT('Cảnh báo nguyên liệu: ', NEW.ten_nguyenlieu, ' chỉ còn ', NEW.so_luong_con_lai, ' ', NEW.don_vi, ', dưới ngưỡng cảnh báo.'),
-            NOW()
-        FROM NhanVien nv
-        WHERE nv.role_id = (SELECT role_id FROM Role WHERE role_name = 'QuanLy');
+    DECLARE v_quanly_role_id INT;
 
+    IF NEW.so_luong_con_lai <= NEW.nguong_canh_bao AND NEW.trang_thai_canh_bao = 0 THEN
+        -- Get QuanLy role_id
+        SELECT role_id INTO v_quanly_role_id FROM Role WHERE role_name = 'QuanLy' LIMIT 1;
+
+        -- Create a notification for managers
+        INSERT INTO ThongBao (role_id, noi_dung, loai_thong_bao)
+        VALUES (
+            v_quanly_role_id,
+            CONCAT('Cảnh báo nguyên liệu: ', NEW.ten_nguyenlieu, ' chỉ còn ', NEW.so_luong_con_lai, ' ', NEW.don_vi, ', dưới ngưỡng cảnh báo.'),
+            'CanhBaoNguyenLieu'
+        );
+
+        -- Update warning status
         UPDATE NguyenLieu
         SET trang_thai_canh_bao = 1
         WHERE nguyenlieu_id = NEW.nguyenlieu_id;
     END IF;
 
     IF NEW.so_luong_con_lai > NEW.nguong_canh_bao AND NEW.trang_thai_canh_bao = 1 THEN
+        -- Reset warning status
         UPDATE NguyenLieu
         SET trang_thai_canh_bao = 0
         WHERE nguyenlieu_id = NEW.nguyenlieu_id;
     END IF;
 END//
-
-DELIMITER ;
-
--- Indexes
-CREATE INDEX idx_nhanvien_email ON NhanVien(email);
-CREATE INDEX idx_donhang_phien ON DonHang(phien_id);
-CREATE INDEX idx_chitiet_donhang ON ChiTietDonHang(donhang_id);
-CREATE INDEX idx_ban_khuvuc ON BanNhaHang(khuvuc_id);
-CREATE INDEX idx_datban_ban ON DatBan(ban_id);	
-CREATE INDEX idx_datban_khachhang ON DatBan(khachhang_id);
-CREATE INDEX idx_monan_nguyenlieu_mon ON MonAnNguyenLieu(monan_id);
-CREATE INDEX idx_monan_nguyenlieu_nguyenlieu ON MonAnNguyenLieu(nguyenlieu_id);
-CREATE INDEX idx_thongtin_khachhang_email ON ThongTinKhachHang(email);
-CREATE INDEX idx_baocao_ngay ON BaoCaoDoanhThu(ngay_bao_cao);
-CREATE INDEX idx_baocao_thang ON BaoCaoDoanhThu(thang, nam);
-CREATE INDEX idx_baocao_quy ON BaoCaoDoanhThu(quy, nam);
-CREATE INDEX idx_baocao_nam ON BaoCaoDoanhThu(nam);
-CREATE INDEX idx_baocao_monan ON BaoCaoChiTietMonAn(baocao_id, monan_id);
-CREATE INDEX idx_nguyenlieu_so_luong ON NguyenLieu(so_luong_con_lai);
-CREATE INDEX idx_thietbi_trang_thai ON ThietBi(trang_thai);
-CREATE INDEX idx_phieunhap_nguyenlieu ON ChiTietPhieuNhap(nguyenlieu_id);
-CREATE INDEX idx_phieuxuat_nguyenlieu ON ChiTietPhieuXuat(nguyenlieu_id);
-
--- Indexes for new tables
-CREATE INDEX idx_phanca_nhanvien ON PhanCaNhanVien(nhanvien_id);
-CREATE INDEX idx_phanca_calamviec ON PhanCaNhanVien(calamviec_id);
-CREATE INDEX idx_luong_nhanvien ON LuongNhanVien(nhanvien_id);
-CREATE INDEX idx_luong_phanca ON LuongNhanVien(phanca_id);
-CREATE INDEX idx_luong_thang_nam ON LuongNhanVien(thang, nam);
-
--- Triggers
-DELIMITER //
 
 -- Trigger to calculate salary when employee checks out
 CREATE TRIGGER trg_TinhLuongNhanVien
@@ -728,4 +741,46 @@ BEGIN
     END IF;
 END//
 
+ CREATE TRIGGER trg_ResetTable_AfterDeleteOrder
+AFTER DELETE ON DonHang
+FOR EACH ROW
+BEGIN
+  IF (SELECT COUNT(*) FROM DonHang WHERE phien_id = OLD.phien_id)=0 THEN
+      UPDATE BanNhaHang
+      SET trang_thai='SanSang'
+      WHERE ban_id = (SELECT ban_id FROM PhienSuDungBan WHERE phien_id=OLD.phien_id);
+  END IF;
+END//
+
+
 DELIMITER ;
+
+
+-- Indexes
+CREATE INDEX idx_nhanvien_email ON NhanVien(email);
+CREATE INDEX idx_donhang_phien ON DonHang(phien_id);
+CREATE INDEX idx_chitiet_donhang ON ChiTietDonHang(donhang_id);
+CREATE INDEX idx_ban_khuvuc ON BanNhaHang(khuvuc_id);
+CREATE INDEX idx_datban_ban ON DatBan(ban_id);	
+CREATE INDEX idx_datban_khachhang ON DatBan(khachhang_id);
+CREATE INDEX idx_monan_nguyenlieu_mon ON MonAnNguyenLieu(monan_id);
+CREATE INDEX idx_monan_nguyenlieu_nguyenlieu ON MonAnNguyenLieu(nguyenlieu_id);
+CREATE INDEX idx_thongtin_khachhang_email ON ThongTinKhachHang(email);
+CREATE INDEX idx_baocao_ngay ON BaoCaoDoanhThu(ngay_bao_cao);
+CREATE INDEX idx_baocao_thang ON BaoCaoDoanhThu(thang, nam);
+CREATE INDEX idx_baocao_quy ON BaoCaoDoanhThu(quy, nam);
+CREATE INDEX idx_baocao_nam ON BaoCaoDoanhThu(nam);
+CREATE INDEX idx_baocao_monan ON BaoCaoChiTietMonAn(baocao_id, monan_id);
+CREATE INDEX idx_nguyenlieu_so_luong ON NguyenLieu(so_luong_con_lai);
+CREATE INDEX idx_thietbi_trang_thai ON ThietBi(trang_thai);
+CREATE INDEX idx_phieunhap_nguyenlieu ON ChiTietPhieuNhap(nguyenlieu_id);
+CREATE INDEX idx_phieuxuat_nguyenlieu ON ChiTietPhieuXuat(nguyenlieu_id);
+
+-- Indexes for new tables
+CREATE INDEX idx_phanca_nhanvien ON PhanCaNhanVien(nhanvien_id);
+CREATE INDEX idx_phanca_calamviec ON PhanCaNhanVien(calamviec_id);
+CREATE INDEX idx_luong_nhanvien ON LuongNhanVien(nhanvien_id);
+CREATE INDEX idx_luong_phanca ON LuongNhanVien(phanca_id);
+CREATE INDEX idx_luong_thang_nam ON LuongNhanVien(thang, nam);
+CREATE INDEX idx_phien_ban ON PhienSuDungBan(ban_id, thoi_gian_bat_dau);
+CREATE INDEX idx_ctdh_donhang ON ChiTietDonHang(donhang_id);

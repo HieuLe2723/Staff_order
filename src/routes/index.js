@@ -25,6 +25,7 @@ const monAnNguyenLieuRoute = require('./MonAnNguyenLieuRoutes');
 const nguyenLieuRoute = require('./NguyenLieuRoutes');
 const nhanVienRoute = require('./nhanVien.route');
 const phienSuDungBanRoute = require('./phienSuDungBan.route');
+const lichSuDonHangRoute = require('./lichSuDonHang.route');
 const phieuNhapHangRoute = require('./phieuNhapHang.route');
 const phieuXuatHangRoute = require('./phieuXuatHang.route');
 const roleRoute = require('./role.route');
@@ -33,6 +34,8 @@ const thietBiRoute = require('./thietBi.route');
 const thongTinKhachHangRoute = require('./thongTinKhachHang.route');
 const authRoute = require('./auth.routes');
 const caLamViecRoute = require('./CaLamViec.route'); // Thêm route cho CaLamViec
+const vnpayRoute = require('./vnpay.route'); // Thêm route cho VNPay
+
 
 // Gán các route vào router với tiền tố phù hợp
 router.use('/ban-nha-hang', banNhaHangRoute);
@@ -57,6 +60,7 @@ router.use('/mon-an-nguyen-lieu', monAnNguyenLieuRoute);
 router.use('/nguyen-lieu', nguyenLieuRoute);
 router.use('/nhan-vien', nhanVienRoute);
 router.use('/phien-su-dung-ban', phienSuDungBanRoute);
+router.use('/lich-su-don-hang', lichSuDonHangRoute);
 router.use('/phieu-nhap-hang', phieuNhapHangRoute);
 router.use('/phieu-xuat-hang', phieuXuatHangRoute);
 router.use('/role', roleRoute);
@@ -65,5 +69,6 @@ router.use('/thiet-bi', thietBiRoute);
 router.use('/thong-tin-khach-hang', thongTinKhachHangRoute);
 router.use('/auth', authRoute);
 router.use('/ca-lam-viec', caLamViecRoute); 
+router.use('/vnpay', vnpayRoute); // Kết nối endpoint VNPay
 
 module.exports = router;

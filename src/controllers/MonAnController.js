@@ -2,6 +2,18 @@ const MonAnService = require('../services/MonAnService');
 const ResponseUtils = require('../utils/response');
 
 class MonAnController {
+  static async getMonAnByLoaiId(req, res) {
+    const { loai_id } = req.query;
+    if (!loai_id) {
+      return res.status(400).json({ success: false, message: 'Thiếu loai_id' });
+    }
+    try {
+      const ds = await MonAnService.getMonAnByLoaiId(Number(loai_id));
+      return res.status(200).json({ success: true, data: ds });
+    } catch (err) {
+      return res.status(400).json({ success: false, message: err.message });
+    }
+  }
   static async createMonAn(req, res) {
     const monAn = await MonAnService.createMonAn(req.body);
     return res.status(201).json(ResponseUtils.success(monAn, 'Dish created successfully', 201));

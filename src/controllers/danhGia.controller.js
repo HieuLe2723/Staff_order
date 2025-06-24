@@ -14,7 +14,7 @@ class DanhGiaController {
         diem_so,
         binh_luan: HelperUtils.sanitizeString(binh_luan),
       };
-      const danhGia = await DanhGiaService.createDanhGia(sanitizedData, req.user);
+      const danhGia = await DanhGiaService.createDanhGia(sanitizedData);
       return res.status(201).json(ResponseUtils.success(danhGia, 'Tạo đánh giá thành công', 201));
     } catch (err) {
       next(err);
@@ -36,6 +36,42 @@ class DanhGiaController {
       const { id } = req.params;
       const result = await DanhGiaService.deleteDanhGia(id, req.user);
       return res.json(ResponseUtils.success(result, 'Xóa đánh giá thành công'));
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  static async getTotalDanhGia(req, res, next) {
+    try {
+      const total = await DanhGiaService.getTotalDanhGia();
+      return res.status(200).json({ total });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  static async getTotalPoints(req, res, next) {
+    try {
+      const totalPoints = await DanhGiaService.getTotalPoints();
+      return res.status(200).json({ totalPoints });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  static async getAverageRating(req, res, next) {
+    try {
+      const averageRating = await DanhGiaService.getAverageRating();
+      return res.status(200).json({ averageRating });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  static async getTotalCustomers(req, res, next) {
+    try {
+      const totalCustomers = await DanhGiaService.getTotalCustomers();
+      return res.status(200).json({ totalCustomers });
     } catch (err) {
       next(err);
     }
